@@ -1,0 +1,7 @@
+[package]
+name = "pvss"
+version = "0.1.0"
+authors = ["Vincent Hanquez <vincent@typed.io>"]
+
+[dependencies]
+openssl = "0.9.14"
