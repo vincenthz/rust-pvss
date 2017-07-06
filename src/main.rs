@@ -11,10 +11,10 @@ fn main() {
         pubs.push(public);
     }
 
-    let escrow = pvss::escrow(t);
+    let escrow = pvss::simple::escrow(t);
 
-    let commitments = pvss::commitments(&escrow);
-    let shares = pvss::create_shares(&escrow, &pubs);
+    let commitments = pvss::simple::commitments(&escrow);
+    let shares = pvss::simple::create_shares(&escrow, &pubs);
 
     let mut decrypted = Vec::with_capacity(100);
 
@@ -29,7 +29,7 @@ fn main() {
                  id = share.id,
                  verified = verified_encrypted);
 
-        let d = pvss::decrypt_share(&keys[idx], &pubs[idx], &share);
+        let d = pvss::simple::decrypt_share(&keys[idx], &pubs[idx], &share);
         let verified_decrypted = d.verify(&pubs[idx], &share);
         println!("decrypted share {id}: {verified}",
                  id = share.id,
@@ -37,6 +37,6 @@ fn main() {
         decrypted.push(d);
     }
 
-    let recovered = pvss::recover(t, decrypted.as_slice()).unwrap();
+    let recovered = pvss::simple::recover(t, decrypted.as_slice()).unwrap();
     println!("equal: {b}", b = (recovered == escrow.secret));
 }
