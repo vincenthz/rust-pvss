@@ -10,6 +10,7 @@ pub struct DLEQ {
     pub g2: Point,
     pub h2: Point,
 }
+#[derive(Clone)]
 pub struct Proof {
     c: Challenge,
     z: Scalar,
