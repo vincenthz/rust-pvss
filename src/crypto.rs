@@ -71,6 +71,10 @@ impl Scalar {
         return Scalar { bn: r };
     }
 
+    pub fn multiplicative_identity() -> Scalar {
+        return Self::from_u32(1);
+    }
+
     pub fn hash_points(points: Vec<Point>) -> Scalar {
         let mut data = Vec::new();
         for p in points {
