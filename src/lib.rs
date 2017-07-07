@@ -4,7 +4,9 @@ pub mod crypto;
 mod types;
 mod math;
 mod dleq;
+mod pdleq;
 pub mod simple;
+pub mod scrape;
 
 #[cfg(test)]
 mod tests {
@@ -12,6 +14,7 @@ mod tests {
     use crypto;
     use dleq;
     use simple;
+    use scrape;
 
     pub const NB_TESTS: usize = 100;
     #[test]
@@ -92,6 +95,50 @@ mod tests {
             }
 
             let recovered = simple::recover(t, decrypted.as_slice()).unwrap();
+            assert!(recovered == escrow.secret);
+        }
+    }
+
+    #[test]
+    fn scrape_works() {
+        let tests = [(2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
+        for test in tests.iter() {
+            let &(t, nb_keys) = test;
+
+            let mut keys = Vec::with_capacity(nb_keys);
+            let mut pubs = Vec::with_capacity(nb_keys);
+            for _ in 0..nb_keys {
+                let (public, private) = crypto::create_keypair();
+                keys.push(private);
+                pubs.push(public);
+            }
+
+            let escrow = scrape::escrow(t);
+
+            let public_shares = scrape::create_shares(&escrow, &pubs);
+
+            let mut decrypted = Vec::with_capacity(100);
+
+            assert_eq!(nb_keys, public_shares.commitments.len());
+            assert_eq!(nb_keys, public_shares.encrypted_shares.len());
+
+            assert!(public_shares.verify(&pubs));
+
+            for share in public_shares.encrypted_shares {
+                let idx = share.id as usize;
+                /*
+                let verified_encrypted =
+                    share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
+                assert!(verified_encrypted);
+                */
+
+                let d = scrape::decrypt_share(&keys[idx], &pubs[idx], &share);
+                let verified_decrypted = d.verify(&pubs[idx], &share);
+                assert!(verified_decrypted);
+                decrypted.push(d);
+            }
+
+            let recovered = scrape::recover(t, decrypted.as_slice()).unwrap();
             assert!(recovered == escrow.secret);
         }
     }
