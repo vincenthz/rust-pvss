@@ -7,9 +7,22 @@ fn main() {
     let mut pubs = Vec::with_capacity(100);
     for _ in 0..100 {
         let (public, private) = pvss::crypto::create_keypair();
+
         keys.push(private);
         pubs.push(public);
     }
+
+    // Round trip public key through bytes
+    let pub_bytes = pubs[0].to_bytes();
+    println!("pub_bytes = {:?}", pub_bytes);
+    let pub_0 = pvss::crypto::PublicKey::from_bytes(&pub_bytes);
+    assert!(pub_0 == pubs[0]);
+
+    // Round trip private key through bytes
+    let priv_bytes = keys[0].to_bytes();
+    println!("priv_bytes = {:?}", priv_bytes);
+    let priv_0 = pvss::crypto::PrivateKey::from_bytes(&priv_bytes);
+    assert!(priv_0 == keys[0]);
 
     let escrow = pvss::simple::escrow(t);
 
