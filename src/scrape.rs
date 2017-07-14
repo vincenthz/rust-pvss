@@ -1,5 +1,5 @@
-// implementation of the simple publicly verifiable secret sharing scheme
-// http://www.win.tue.nl/~berry/papers/crypto99.pdf
+// implementation of SCRAPE: Scalable Randomness Attested by Public Entities
+// https://eprint.iacr.org/2017/216.pdf
 
 use types::*;
 use math;
