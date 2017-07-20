@@ -9,7 +9,7 @@ use crypto::*;
 
 use std::borrow::Borrow;
 
-type Secret = Point;
+pub type Secret = Point;
 
 pub struct Escrow {
     pub extra_generator: Point,

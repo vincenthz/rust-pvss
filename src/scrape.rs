@@ -7,7 +7,7 @@ use dleq;
 use pdleq;
 use crypto::*;
 
-type Secret = Point;
+pub type Secret = Point;
 
 // a new escrowing context.
 // this contains secret values (polynomial & secret) that are newly created.
