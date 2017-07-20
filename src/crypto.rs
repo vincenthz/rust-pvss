@@ -12,13 +12,16 @@ pub const CURVE: openssl::nid::Nid = openssl::nid::X9_62_PRIME256V1;
 pub struct Scalar {
     bn: BigNum,
 }
+
 pub struct Point {
     point: EcPoint,
 }
+
 #[derive(PartialEq)]
 pub struct PrivateKey {
     pub scalar: Scalar,
 }
+
 #[derive(PartialEq)]
 pub struct PublicKey {
     pub point: Point,
@@ -26,9 +29,7 @@ pub struct PublicKey {
 
 impl PublicKey {
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut ctx = BigNumContext::new().unwrap();
-        self.point.point.to_bytes(&get_grp(), POINT_CONVERSION_UNCOMPRESSED, &mut ctx)
-            .expect("Could not convert PublicKey to bytes")
+        self.point.to_bytes()
     }
 
     pub fn from_bytes(bytes: &[u8]) -> PublicKey {
