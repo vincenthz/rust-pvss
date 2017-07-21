@@ -7,7 +7,9 @@ use dleq;
 
 use crypto::*;
 
-type Secret = Point;
+use std::borrow::Borrow;
+
+pub type Secret = Point;
 
 pub struct Escrow {
     pub extra_generator: Point,
@@ -87,13 +89,12 @@ pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> E
     };
 }
 
-pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> Vec<EncryptedShare> {
-    let mut shares = Vec::with_capacity(pubs.len());
-    for i in 0..(pubs.len()) {
-        let share = create_share(escrow, i as ShareId, &pubs[i]);
-        shares.push(share);
-    }
-    return shares;
+pub fn create_shares<I, K>(escrow: &Escrow, pubs: I) -> Vec<EncryptedShare>
+where I: IntoIterator<Item=K>,
+      K: Borrow<PublicKey> {
+    pubs.into_iter().enumerate().map(|(i, pub_key)| {
+        create_share(escrow, i as ShareId, pub_key.borrow())
+    }).collect()
 }
 
 fn create_xi(id: ShareId, commitments: &[Commitment]) -> Point {

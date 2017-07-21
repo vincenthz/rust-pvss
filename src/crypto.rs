@@ -12,14 +12,50 @@ pub const CURVE: openssl::nid::Nid = openssl::nid::X9_62_PRIME256V1;
 pub struct Scalar {
     bn: BigNum,
 }
+
 pub struct Point {
     point: EcPoint,
 }
+
+#[derive(PartialEq)]
 pub struct PrivateKey {
     pub scalar: Scalar,
 }
+
+#[derive(PartialEq)]
 pub struct PublicKey {
     pub point: Point,
+}
+
+impl PublicKey {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.point.to_bytes()
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> PublicKey {
+        let mut ctx = BigNumContext::new().unwrap();
+        PublicKey {
+            point: Point {
+                point: EcPoint::from_bytes(&get_grp(), bytes, &mut ctx)
+                    .expect("Could not create PublicKey from bytes")
+            }
+        }
+    }
+}
+
+impl PrivateKey {
+    // to_hex_str?? https://docs.rs/openssl/0.9.14/openssl/bn/struct.BigNum.html#method.to_hex_str
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.scalar.bn.to_vec()
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> PrivateKey {
+        PrivateKey {
+            scalar: Scalar {
+                bn: BigNum::from_slice(bytes).expect("Could not create PrivateKey from bytes")
+            }
+        }
+    }
 }
 
 pub fn create_keypair() -> (PublicKey, PrivateKey) {
