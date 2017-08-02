@@ -139,12 +139,6 @@ mod tests {
             for share in public_shares.encrypted_shares {
                 assert!(share.id > 0);
                 let idx = (share.id - 1) as usize;
-                /*
-                let verified_encrypted =
-                    share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
-                assert!(verified_encrypted);
-                */
-
                 let d = scrape::decrypt_share(&keys[idx], &pubs[idx], &share);
                 let verified_decrypted = d.verify(&pubs[idx], &share);
                 assert!(verified_decrypted);
