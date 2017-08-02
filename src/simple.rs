@@ -50,7 +50,7 @@ pub fn escrow(t: Threshold) -> Escrow {
         g1: Point::generator(),
         h1: g_s.clone(),
         g2: gen.clone(),
-        h2: Point::from_scalar(&secret),
+        h2: gen.mul(&secret),
     };
     let proof = dleq::Proof::create(challenge, secret, dleq);
 
@@ -192,4 +192,18 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
         result = result + shares[i].decrypted_val.mul(&v);
     }
     return Ok(result);
+}
+
+pub fn verify_secret(secret: Secret,
+                     extra_generator: Point,
+                     commitments: &[Commitment],
+                     proof: dleq::Proof)
+                     -> bool {
+    let dleq = dleq::DLEQ {
+        g1: Point::generator(),
+        h1: secret,
+        g2: extra_generator.clone(),
+        h2: commitments[0].point.clone(),
+    };
+    return proof.verify(dleq);
 }
