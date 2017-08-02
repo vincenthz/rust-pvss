@@ -37,7 +37,9 @@ pub struct DecryptedShare {
 // create a new escrow parameter.
 // the only parameter needed is the threshold necessary to be able to reconstruct.
 pub fn escrow(t: Threshold) -> Escrow {
-    let poly = math::Polynomial::generate(t);
+    assert!(t >= 1, "threshold is invalid; < 1");
+
+    let poly = math::Polynomial::generate(t - 1);
     let gen = Point::from_scalar(&Scalar::generate());
 
     let secret = poly.at_zero();
@@ -71,6 +73,8 @@ pub fn commitments(escrow: &Escrow) -> Vec<Commitment> {
 }
 
 pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> EncryptedShare {
+    assert!(share_id != 0, "trying to create a share with id = 0");
+
     let peval = escrow.polynomial.evaluate(Scalar::from_u32(share_id));
     let challenge = Scalar::generate();
     let xi = escrow.extra_generator.mul(&peval);
@@ -90,16 +94,18 @@ pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> E
 }
 
 pub fn create_shares<I, K>(escrow: &Escrow, pubs: I) -> Vec<EncryptedShare>
-where I: IntoIterator<Item=K>,
-      K: Borrow<PublicKey> {
-    pubs.into_iter().enumerate().map(|(i, pub_key)| {
-        create_share(escrow, i as ShareId, pub_key.borrow())
-    }).collect()
+    where I: IntoIterator<Item = K>,
+          K: Borrow<PublicKey>
+{
+    pubs.into_iter()
+        .enumerate()
+        .map(|(i, pub_key)| create_share(escrow, (i + 1) as ShareId, pub_key.borrow()))
+        .collect()
 }
 
 fn create_xi(id: ShareId, commitments: &[Commitment]) -> Point {
     let mut r = Point::infinity();
-    for j in 0..(commitments.len() - 1) {
+    for j in 0..(commitments.len()) {
         let e = Scalar::from_u32(id).pow(j as u32);
         r = r.clone() + (commitments[j].point.mul(&e));
     }

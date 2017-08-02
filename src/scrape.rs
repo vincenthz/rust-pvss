@@ -55,7 +55,9 @@ pub struct DecryptedShare {
 // create a new escrow parameter.
 // the only parameter needed is the threshold necessary to be able to reconstruct.
 pub fn escrow(t: Threshold) -> Escrow {
-    let poly = math::Polynomial::generate(t);
+    assert!(t >= 1, "threshold is invalid; < 1");
+
+    let poly = math::Polynomial::generate(t - 1);
     let gen = Point::from_scalar(&Scalar::generate());
 
     let secret = poly.at_zero();
@@ -88,13 +90,13 @@ pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
 
     for i in 0..n {
         let ref public = pubs[i];
-        let eval_point = i + 0;
+        let eval_point = i + 1;
         let si = escrow.polynomial.evaluate(Scalar::from_u32(eval_point as u32));
         let esi = public.point.mul(&si);
         let vi = escrow.extra_generator.mul(&si);
 
         shares.push(EncryptedShare {
-            id: i as ShareId,
+            id: (i + 1) as ShareId,
             encrypted_val: esi.clone(),
         });
         commitments.push(Commitment { point: vi.clone() });
