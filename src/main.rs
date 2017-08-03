@@ -66,7 +66,7 @@ fn main() {
     println!("shares: {nb_shares}", nb_shares = shares.len());
 
     for share in shares {
-        let idx = share.id as usize;
+        let idx = (share.id-1) as usize;
         let verified_encrypted =
             share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
         println!("encrypted share {id}: {verified}",
