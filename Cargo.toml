@@ -5,7 +5,6 @@ authors = ["Vincent Hanquez <vincent@typed.io>"]
 description = "Publicly verifiable secret sharing implementations"
 homepage = "https://github.com/vincenthz/rust-pvss"
 repository = "https://github.com/vincenthz/rust-pvss"
-license = "MIT"
 license-file = "LICENSE"
 
 [lib]
