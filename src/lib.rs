@@ -136,7 +136,7 @@ mod tests {
 
             assert!(public_shares.verify(&pubs));
 
-            for share in public_shares.encrypted_shares {
+            for share in &public_shares.encrypted_shares {
                 assert!(share.id > 0);
                 let idx = (share.id - 1) as usize;
                 let d = scrape::decrypt_share(&keys[idx], &pubs[idx], &share);
@@ -147,6 +147,9 @@ mod tests {
 
             let recovered = scrape::recover(t, decrypted.as_slice()).unwrap();
             assert!(recovered == escrow.secret);
+
+            let verify_secret = scrape::verify_secret(recovered, &public_shares);
+            assert!(verify_secret, "secret not verified");
         }
     }
 }

@@ -68,7 +68,7 @@ pub fn escrow(t: Threshold) -> Escrow {
         g1: Point::generator(),
         h1: g_s.clone(),
         g2: gen.clone(),
-        h2: Point::from_scalar(&secret),
+        h2: gen.mul(&secret),
     };
     let proof = dleq::Proof::create(challenge, secret, dleq);
 
@@ -96,7 +96,7 @@ pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
         let vi = escrow.extra_generator.mul(&si);
 
         shares.push(EncryptedShare {
-            id: (i + 1) as ShareId,
+            id: eval_point as ShareId,
             encrypted_val: esi.clone(),
         });
         commitments.push(Commitment { point: vi.clone() });
@@ -234,4 +234,31 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
         result = result + shares[i].decrypted_val.mul(&v);
     }
     return Ok(result);
+}
+
+pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
+    let mut commitment_interpolate = Point::infinity();
+    for i in 0..(public_shares.threshold as usize) {
+        let x = public_shares.commitments[i].point.clone();
+        let li = {
+            let mut v = Scalar::multiplicative_identity();
+            for j in 0..(public_shares.threshold as usize) {
+                if j != i {
+                    let sj = Scalar::from_u32((j + 1) as u32);
+                    let si = Scalar::from_u32((i + 1) as u32);
+                    let d = sj.clone() - si;
+                    v = v * sj * d.inverse();
+                }
+            }
+            v
+        };
+        commitment_interpolate = commitment_interpolate + x.mul(&li);
+    }
+    let dleq = dleq::DLEQ {
+        g1: Point::generator(),
+        h1: secret,
+        g2: public_shares.extra_generator.clone(),
+        h2: commitment_interpolate,
+    };
+    return public_shares.secret_proof.verify(dleq);
 }
