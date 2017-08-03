@@ -37,8 +37,8 @@ impl PublicKey {
         PublicKey {
             point: Point {
                 point: EcPoint::from_bytes(&get_grp(), bytes, &mut ctx)
-                    .expect("Could not create PublicKey from bytes")
-            }
+                    .expect("Could not create PublicKey from bytes"),
+            },
         }
     }
 }
@@ -52,8 +52,8 @@ impl PrivateKey {
     pub fn from_bytes(bytes: &[u8]) -> PrivateKey {
         PrivateKey {
             scalar: Scalar {
-                bn: BigNum::from_slice(bytes).expect("Could not create PrivateKey from bytes")
-            }
+                bn: BigNum::from_slice(bytes).expect("Could not create PrivateKey from bytes"),
+            },
         }
     }
 }

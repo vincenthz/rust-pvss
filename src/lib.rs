@@ -60,9 +60,10 @@ mod tests {
 
     #[test]
     fn pvss_works() {
-        let tests = [(2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
+        let tests = [(1, 4), (5, 5), (2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
         for test in tests.iter() {
             let &(t, nb_keys) = test;
+            println!("t={} n={}", t, nb_keys);
 
             let mut keys = Vec::with_capacity(nb_keys);
             let mut pubs = Vec::with_capacity(nb_keys);
@@ -83,10 +84,14 @@ mod tests {
             assert_eq!(pubs.len(), shares.len());
 
             for share in shares {
-                let idx = share.id as usize;
+                /* share ids start at 1 */
+                assert!(share.id > 0);
+                let idx = (share.id - 1) as usize;
                 let verified_encrypted =
                     share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
-                assert!(verified_encrypted);
+                assert!(verified_encrypted,
+                        "encrypted share {} verification failed",
+                        share.id);
 
                 let d = simple::decrypt_share(&keys[idx], &pubs[idx], &share);
                 let verified_decrypted = d.verify(&pubs[idx], &share);
@@ -95,15 +100,22 @@ mod tests {
             }
 
             let recovered = simple::recover(t, decrypted.as_slice()).unwrap();
+
             assert!(recovered == escrow.secret);
+            let verify_secret = simple::verify_secret(recovered,
+                                                      escrow.extra_generator,
+                                                      &commitments,
+                                                      escrow.proof);
+            assert!(verify_secret, "secret not verified");
         }
     }
 
     #[test]
     fn scrape_works() {
-        let tests = [(2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
+        let tests = [(1, 4), (2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
         for test in tests.iter() {
             let &(t, nb_keys) = test;
+            println!("t={} n={}", t, nb_keys);
 
             let mut keys = Vec::with_capacity(nb_keys);
             let mut pubs = Vec::with_capacity(nb_keys);
@@ -124,14 +136,9 @@ mod tests {
 
             assert!(public_shares.verify(&pubs));
 
-            for share in public_shares.encrypted_shares {
-                let idx = share.id as usize;
-                /*
-                let verified_encrypted =
-                    share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
-                assert!(verified_encrypted);
-                */
-
+            for share in &public_shares.encrypted_shares {
+                assert!(share.id > 0);
+                let idx = (share.id - 1) as usize;
                 let d = scrape::decrypt_share(&keys[idx], &pubs[idx], &share);
                 let verified_decrypted = d.verify(&pubs[idx], &share);
                 assert!(verified_decrypted);
@@ -140,6 +147,9 @@ mod tests {
 
             let recovered = scrape::recover(t, decrypted.as_slice()).unwrap();
             assert!(recovered == escrow.secret);
+
+            let verify_secret = scrape::verify_secret(recovered, &public_shares);
+            assert!(verify_secret, "secret not verified");
         }
     }
 }

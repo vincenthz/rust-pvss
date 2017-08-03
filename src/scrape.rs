@@ -55,7 +55,9 @@ pub struct DecryptedShare {
 // create a new escrow parameter.
 // the only parameter needed is the threshold necessary to be able to reconstruct.
 pub fn escrow(t: Threshold) -> Escrow {
-    let poly = math::Polynomial::generate(t);
+    assert!(t >= 1, "threshold is invalid; < 1");
+
+    let poly = math::Polynomial::generate(t - 1);
     let gen = Point::from_scalar(&Scalar::generate());
 
     let secret = poly.at_zero();
@@ -66,7 +68,7 @@ pub fn escrow(t: Threshold) -> Escrow {
         g1: Point::generator(),
         h1: g_s.clone(),
         g2: gen.clone(),
-        h2: Point::from_scalar(&secret),
+        h2: gen.mul(&secret),
     };
     let proof = dleq::Proof::create(challenge, secret, dleq);
 
@@ -88,13 +90,13 @@ pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
 
     for i in 0..n {
         let ref public = pubs[i];
-        let eval_point = i + 0;
+        let eval_point = i + 1;
         let si = escrow.polynomial.evaluate(Scalar::from_u32(eval_point as u32));
         let esi = public.point.mul(&si);
         let vi = escrow.extra_generator.mul(&si);
 
         shares.push(EncryptedShare {
-            id: i as ShareId,
+            id: eval_point as ShareId,
             encrypted_val: esi.clone(),
         });
         commitments.push(Commitment { point: vi.clone() });
@@ -232,4 +234,31 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
         result = result + shares[i].decrypted_val.mul(&v);
     }
     return Ok(result);
+}
+
+pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
+    let mut commitment_interpolate = Point::infinity();
+    for i in 0..(public_shares.threshold as usize) {
+        let x = public_shares.commitments[i].point.clone();
+        let li = {
+            let mut v = Scalar::multiplicative_identity();
+            for j in 0..(public_shares.threshold as usize) {
+                if j != i {
+                    let sj = Scalar::from_u32((j + 1) as u32);
+                    let si = Scalar::from_u32((i + 1) as u32);
+                    let d = sj.clone() - si;
+                    v = v * sj * d.inverse();
+                }
+            }
+            v
+        };
+        commitment_interpolate = commitment_interpolate + x.mul(&li);
+    }
+    let dleq = dleq::DLEQ {
+        g1: Point::generator(),
+        h1: secret,
+        g2: public_shares.extra_generator.clone(),
+        h2: commitment_interpolate,
+    };
+    return public_shares.secret_proof.verify(dleq);
 }
