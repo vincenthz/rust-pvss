@@ -1,9 +1,9 @@
 // implementation of the simple publicly verifiable secret sharing scheme
 // http://www.win.tue.nl/~berry/papers/crypto99.pdf
 
-use types::*;
-use math;
 use dleq;
+use math;
+use types::*;
 
 use crypto::*;
 
@@ -66,7 +66,9 @@ pub fn commitments(escrow: &Escrow) -> Vec<Commitment> {
     let mut commitments = Vec::with_capacity(escrow.polynomial.len());
 
     for i in 0..(escrow.polynomial.len()) {
-        let com = Commitment { point: escrow.extra_generator.mul(&escrow.polynomial.elements[i]) };
+        let com = Commitment {
+            point: escrow.extra_generator.mul(&escrow.polynomial.elements[i]),
+        };
         commitments.push(com);
     }
     return commitments;
@@ -94,8 +96,9 @@ pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> E
 }
 
 pub fn create_shares<I, K>(escrow: &Escrow, pubs: I) -> Vec<EncryptedShare>
-    where I: IntoIterator<Item = K>,
-          K: Borrow<PublicKey>
+where
+    I: IntoIterator<Item = K>,
+    K: Borrow<PublicKey>,
 {
     pubs.into_iter()
         .enumerate()
@@ -113,12 +116,13 @@ fn create_xi(id: ShareId, commitments: &[Commitment]) -> Point {
 }
 
 impl EncryptedShare {
-    pub fn verify(&self,
-                  id: ShareId,
-                  public: &PublicKey,
-                  extra_generator: &Point,
-                  commitments: &[Commitment])
-                  -> bool {
+    pub fn verify(
+        &self,
+        id: ShareId,
+        public: &PublicKey,
+        extra_generator: &Point,
+        commitments: &[Commitment],
+    ) -> bool {
         let xi = create_xi(id, commitments);
         let dleq = dleq::DLEQ {
             g1: extra_generator.clone(),
@@ -142,10 +146,11 @@ impl DecryptedShare {
     }
 }
 
-pub fn decrypt_share(private: &PrivateKey,
-                     public: &PublicKey,
-                     share: &EncryptedShare)
-                     -> DecryptedShare {
+pub fn decrypt_share(
+    private: &PrivateKey,
+    public: &PublicKey,
+    share: &EncryptedShare,
+) -> DecryptedShare {
     let challenge = Scalar::generate();
     let xi = private.scalar.clone();
     let yi = public.point.clone();
@@ -194,11 +199,12 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
     return Ok(result);
 }
 
-pub fn verify_secret(secret: Secret,
-                     extra_generator: Point,
-                     commitments: &[Commitment],
-                     proof: dleq::Proof)
-                     -> bool {
+pub fn verify_secret(
+    secret: Secret,
+    extra_generator: Point,
+    commitments: &[Commitment],
+    proof: dleq::Proof,
+) -> bool {
     let dleq = dleq::DLEQ {
         g1: Point::generator(),
         h1: secret,

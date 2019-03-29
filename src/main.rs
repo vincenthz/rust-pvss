@@ -3,32 +3,32 @@ extern crate pvss;
 use std::fmt;
 
 /// Slice pretty print helper
-pub struct PrettySlice<'a> (&'a [u8]);
+pub struct PrettySlice<'a>(&'a [u8]);
 
 impl<'a> fmt::Display for PrettySlice<'a> {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		for i in 0..self.0.len() {
-			write!(f, "{:02x}", self.0[i])?;
-		}
-		Ok(())
-	}
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in 0..self.0.len() {
+            write!(f, "{:02x}", self.0[i])?;
+        }
+        Ok(())
+    }
 }
 
 /// Trait to allow a type to be pretty-printed in `format!`, where unoverridable
 /// defaults cannot otherwise be avoided.
 pub trait ToPretty {
-	/// Convert a type into a derivative form in order to make `format!` print it prettily.
-	fn pretty(&self) -> PrettySlice;
-	/// Express the object as a hex string.
-	fn to_hex(&self) -> String {
-		format!("{}", self.pretty())
-	}
+    /// Convert a type into a derivative form in order to make `format!` print it prettily.
+    fn pretty(&self) -> PrettySlice;
+    /// Express the object as a hex string.
+    fn to_hex(&self) -> String {
+        format!("{}", self.pretty())
+    }
 }
 
 impl<T: AsRef<[u8]>> ToPretty for T {
-	fn pretty(&self) -> PrettySlice {
-		PrettySlice(self.as_ref())
-	}
+    fn pretty(&self) -> PrettySlice {
+        PrettySlice(self.as_ref())
+    }
 }
 
 fn main() {
@@ -66,18 +66,22 @@ fn main() {
     println!("shares: {nb_shares}", nb_shares = shares.len());
 
     for share in shares {
-        let idx = (share.id-1) as usize;
+        let idx = (share.id - 1) as usize;
         let verified_encrypted =
             share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
-        println!("encrypted share {id}: {verified}",
-                 id = share.id,
-                 verified = verified_encrypted);
+        println!(
+            "encrypted share {id}: {verified}",
+            id = share.id,
+            verified = verified_encrypted
+        );
 
         let d = pvss::simple::decrypt_share(&keys[idx], &pubs[idx], &share);
         let verified_decrypted = d.verify(&pubs[idx], &share);
-        println!("decrypted share {id}: {verified}",
-                 id = share.id,
-                 verified = verified_decrypted);
+        println!(
+            "decrypted share {id}: {verified}",
+            id = share.id,
+            verified = verified_decrypted
+        );
         decrypted.push(d);
     }
 

@@ -1,4 +1,3 @@
-
 // threshold need to >= 2
 pub type Threshold = u32;
 

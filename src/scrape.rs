@@ -1,11 +1,11 @@
 // implementation of SCRAPE: Scalable Randomness Attested by Public Entities
 // https://eprint.iacr.org/2017/216.pdf
 
-use types::*;
-use math;
-use dleq;
-use pdleq;
 use crypto::*;
+use dleq;
+use math;
+use pdleq;
+use types::*;
 
 pub type Secret = Point;
 
@@ -82,7 +82,6 @@ pub fn escrow(t: Threshold) -> Escrow {
 }
 
 pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
-
     let n = pubs.len();
     let mut shares = Vec::with_capacity(n);
     let mut commitments = Vec::with_capacity(n);
@@ -91,7 +90,9 @@ pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
     for i in 0..n {
         let ref public = pubs[i];
         let eval_point = i + 1;
-        let si = escrow.polynomial.evaluate(Scalar::from_u32(eval_point as u32));
+        let si = escrow
+            .polynomial
+            .evaluate(Scalar::from_u32(eval_point as u32));
         let esi = public.point.mul(&si);
         let vi = escrow.extra_generator.mul(&si);
 
@@ -186,10 +187,11 @@ impl DecryptedShare {
     }
 }
 
-pub fn decrypt_share(private: &PrivateKey,
-                     public: &PublicKey,
-                     share: &EncryptedShare)
-                     -> DecryptedShare {
+pub fn decrypt_share(
+    private: &PrivateKey,
+    public: &PublicKey,
+    share: &EncryptedShare,
+) -> DecryptedShare {
     let challenge = Scalar::generate();
     let xi = private.scalar.clone();
     let yi = public.point.clone();
@@ -229,7 +231,6 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
     };
     let mut result = Point::infinity();
     for i in 0..(t as usize) {
-
         let v = interpolate_one(t, i, shares);
         result = result + shares[i].decrypted_val.mul(&v);
     }

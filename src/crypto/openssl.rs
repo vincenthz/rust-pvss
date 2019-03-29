@@ -1,9 +1,9 @@
 use openssl;
-use openssl::ec::*;
 use openssl::bn::*;
+use openssl::ec::*;
 use std::ops::Add;
-use std::ops::Sub;
 use std::ops::Mul;
+use std::ops::Sub;
 
 // currently hardcode curve to P256R1, but in the future probably a good idea
 // to generalize the interface, and make it more generics (with generics for all crypto types)
@@ -97,7 +97,9 @@ fn curve_generator() -> EcPoint {
 
 impl Scalar {
     pub fn from_u32(v: u32) -> Scalar {
-        let r = Scalar { bn: BigNum::from_u32(v).unwrap() };
+        let r = Scalar {
+            bn: BigNum::from_u32(v).unwrap(),
+        };
         return r;
     }
     pub fn generate() -> Scalar {
@@ -125,7 +127,6 @@ impl Scalar {
         return Scalar { bn: r };
     }
 
-
     pub fn pow(&self, pow: u32) -> Scalar {
         let mut ctx = BigNumContext::new().unwrap();
         let order = get_order();
@@ -147,7 +148,9 @@ impl Scalar {
 
 impl Clone for Scalar {
     fn clone(&self) -> Scalar {
-        return Scalar { bn: BigNum::from_slice(&self.bn.to_vec()).unwrap() };
+        return Scalar {
+            bn: BigNum::from_slice(&self.bn.to_vec()).unwrap(),
+        };
     }
 }
 
@@ -195,11 +198,15 @@ impl PartialEq for Scalar {
 
 impl Point {
     pub fn infinity() -> Point {
-        return Point { point: get_point_at_infinity() };
+        return Point {
+            point: get_point_at_infinity(),
+        };
     }
 
     pub fn generator() -> Point {
-        return Point { point: curve_generator() };
+        return Point {
+            point: curve_generator(),
+        };
     }
 
     pub fn from_scalar(s: &Scalar) -> Point {
@@ -221,7 +228,10 @@ impl Point {
     pub fn inverse(&self) -> Point {
         let grp = get_grp();
         let mut ctx = BigNumContext::new().unwrap();
-        let bytes = self.point.to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx).unwrap();
+        let bytes = self
+            .point
+            .to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx)
+            .unwrap();
         let mut p = EcPoint::from_bytes(&grp, &bytes, &mut ctx).unwrap();
         p.invert(&grp, &mut ctx).unwrap();
         return Point { point: p };
@@ -230,7 +240,10 @@ impl Point {
     pub fn to_bytes(&self) -> Vec<u8> {
         let grp = get_grp();
         let mut ctx = BigNumContext::new().unwrap();
-        return self.point.to_bytes(&grp, POINT_CONVERSION_COMPRESSED, &mut ctx).unwrap();
+        return self
+            .point
+            .to_bytes(&grp, POINT_CONVERSION_COMPRESSED, &mut ctx)
+            .unwrap();
     }
 }
 
@@ -238,8 +251,13 @@ impl Clone for Point {
     fn clone(&self) -> Point {
         let mut ctx = BigNumContext::new().unwrap();
         let grp = get_grp();
-        let bytes = self.point.to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx).unwrap();
-        return Point { point: EcPoint::from_bytes(&grp, &bytes, &mut ctx).unwrap() };
+        let bytes = self
+            .point
+            .to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx)
+            .unwrap();
+        return Point {
+            point: EcPoint::from_bytes(&grp, &bytes, &mut ctx).unwrap(),
+        };
     }
 }
 
@@ -269,8 +287,14 @@ impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
         let mut ctx = BigNumContext::new().unwrap();
         let grp = get_grp();
-        let b1 = self.point.to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx).unwrap();
-        let b2 = other.point.to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx).unwrap();
+        let b1 = self
+            .point
+            .to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx)
+            .unwrap();
+        let b2 = other
+            .point
+            .to_bytes(&grp, POINT_CONVERSION_UNCOMPRESSED, &mut ctx)
+            .unwrap();
         return b1 == b2;
     }
 }

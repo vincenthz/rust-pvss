@@ -1,20 +1,20 @@
 extern crate openssl;
 pub mod crypto;
 
-mod types;
-mod math;
 mod dleq;
+mod math;
 mod pdleq;
-pub mod simple;
 pub mod scrape;
+pub mod simple;
+mod types;
 
 #[cfg(test)]
 mod tests {
-    use crypto::*;
     use crypto;
+    use crypto::*;
     use dleq;
-    use simple;
     use scrape;
+    use simple;
 
     pub const NB_TESTS: usize = 100;
     #[test]
@@ -60,7 +60,15 @@ mod tests {
 
     #[test]
     fn pvss_works() {
-        let tests = [(1, 4), (5, 5), (2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
+        let tests = [
+            (1, 4),
+            (5, 5),
+            (2, 8),
+            (10, 50),
+            (48, 50),
+            (2, 20),
+            (10, 100),
+        ];
         for test in tests.iter() {
             let &(t, nb_keys) = test;
             println!("t={} n={}", t, nb_keys);
@@ -89,9 +97,11 @@ mod tests {
                 let idx = (share.id - 1) as usize;
                 let verified_encrypted =
                     share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
-                assert!(verified_encrypted,
-                        "encrypted share {} verification failed",
-                        share.id);
+                assert!(
+                    verified_encrypted,
+                    "encrypted share {} verification failed",
+                    share.id
+                );
 
                 let d = simple::decrypt_share(&keys[idx], &pubs[idx], &share);
                 let verified_decrypted = d.verify(&pubs[idx], &share);
@@ -102,10 +112,12 @@ mod tests {
             let recovered = simple::recover(t, decrypted.as_slice()).unwrap();
 
             assert!(recovered == escrow.secret);
-            let verify_secret = simple::verify_secret(recovered,
-                                                      escrow.extra_generator,
-                                                      &commitments,
-                                                      escrow.proof);
+            let verify_secret = simple::verify_secret(
+                recovered,
+                escrow.extra_generator,
+                &commitments,
+                escrow.proof,
+            );
             assert!(verify_secret, "secret not verified");
         }
     }
