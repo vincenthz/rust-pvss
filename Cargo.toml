@@ -6,6 +6,8 @@ description = "Publicly verifiable secret sharing implementations"
 homepage = "https://github.com/vincenthz/rust-pvss"
 repository = "https://github.com/vincenthz/rust-pvss"
 license = "MIT"
+keywords = [ "Crypto", "Cryptography", "Secret", "Sharing" ]
+categories = [ "cryptography" ]
 edition = "2018"
 
 [lib]
