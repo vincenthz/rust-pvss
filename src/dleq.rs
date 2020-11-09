@@ -1,5 +1,5 @@
 // DLEQ proof through g^a
-use crypto::*;
+use super::crypto::*;
 
 type Challenge = Scalar;
 
@@ -22,7 +22,7 @@ impl Proof {
         let a2 = dleq.g2.mul(&w);
         let c = Scalar::hash_points(vec![dleq.h1, dleq.h2, a1, a2]);
         let r = w + a * c.clone();
-        return Proof { c: c, z: r };
+        Proof { c, z: r }
     }
 
     pub fn verify(&self, dleq: DLEQ) -> bool {
@@ -30,6 +30,6 @@ impl Proof {
         let r2 = dleq.g2.mul(&self.z);
         let a1 = r1 - dleq.h1.mul(&self.c);
         let a2 = r2 - dleq.h2.mul(&self.c);
-        return self.c == Scalar::hash_points(vec![dleq.h1, dleq.h2, a1, a2]);
+        self.c == Scalar::hash_points(vec![dleq.h1, dleq.h2, a1, a2])
     }
 }

@@ -6,9 +6,10 @@ description = "Publicly verifiable secret sharing implementations"
 homepage = "https://github.com/vincenthz/rust-pvss"
 repository = "https://github.com/vincenthz/rust-pvss"
 license = "MIT"
+edition = "2018"
 
 [lib]
 name = "pvss"
 
 [dependencies]
-openssl = "0.9.14"
+openssl = "0.10"

@@ -1,5 +1,5 @@
 // Math module define polynomial types and operations that is used to setup the scheme.
-use crypto;
+use super::crypto;
 
 pub struct Polynomial {
     pub elements: Vec<crypto::Scalar>,
@@ -12,13 +12,13 @@ impl Polynomial {
 
         for _ in 0..vec_size {
             let r = crypto::Scalar::generate();
-            vec.push(r);
+            vec.push(r)
         }
-        return Polynomial { elements: vec };
+        Polynomial { elements: vec }
     }
 
     pub fn len(&self) -> usize {
-        return self.elements.len();
+        self.elements.len()
     }
 
     /// get the value of a polynomial a0 + a1 * x^1 + a2 * x^2 + .. + an * x^n for a value x=at
@@ -28,9 +28,9 @@ impl Polynomial {
             let v = self.elements[degree].clone();
             r = r + v * at.pow(degree as u32);
         }
-        return r;
+        r
     }
     pub fn at_zero(&self) -> crypto::Scalar {
-        return self.elements[0].clone();
+        self.elements[0].clone()
     }
 }

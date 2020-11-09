@@ -1,11 +1,11 @@
 // implementation of the simple publicly verifiable secret sharing scheme
 // http://www.win.tue.nl/~berry/papers/crypto99.pdf
 
-use dleq;
-use math;
-use types::*;
+use super::dleq;
+use super::math;
+use super::types::*;
 
-use crypto::*;
+use super::crypto::*;
 
 use std::borrow::Borrow;
 
@@ -54,12 +54,12 @@ pub fn escrow(t: Threshold) -> Escrow {
     };
     let proof = dleq::Proof::create(challenge, secret, dleq);
 
-    return Escrow {
+    Escrow {
         extra_generator: gen,
         polynomial: poly,
         secret: g_s,
-        proof: proof,
-    };
+        proof,
+    }
 }
 
 pub fn commitments(escrow: &Escrow) -> Vec<Commitment> {
@@ -71,7 +71,7 @@ pub fn commitments(escrow: &Escrow) -> Vec<Commitment> {
         };
         commitments.push(com);
     }
-    return commitments;
+    commitments
 }
 
 pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> EncryptedShare {
@@ -88,11 +88,11 @@ pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> E
         h2: yi.clone(),
     };
     let proof = dleq::Proof::create(challenge, peval, dleq);
-    return EncryptedShare {
+    EncryptedShare {
         id: share_id,
         encrypted_val: yi,
-        proof: proof,
-    };
+        proof,
+    }
 }
 
 pub fn create_shares<I, K>(escrow: &Escrow, pubs: I) -> Vec<EncryptedShare>
@@ -108,11 +108,11 @@ where
 
 fn create_xi(id: ShareId, commitments: &[Commitment]) -> Point {
     let mut r = Point::infinity();
-    for j in 0..(commitments.len()) {
+    for (j, com) in commitments.iter().enumerate() {
         let e = Scalar::from_u32(id).pow(j as u32);
-        r = r.clone() + (commitments[j].point.mul(&e));
+        r = r.clone() + (com.point.mul(&e));
     }
-    return r;
+    r
 }
 
 impl EncryptedShare {
@@ -130,7 +130,7 @@ impl EncryptedShare {
             g2: public.point.clone(),
             h2: self.encrypted_val.clone(),
         };
-        return self.proof.verify(dleq);
+        self.proof.verify(dleq)
     }
 }
 
@@ -142,7 +142,7 @@ impl DecryptedShare {
             g2: self.decrypted_val.clone(),
             h2: eshare.encrypted_val.clone(),
         };
-        return self.proof.verify(dleq);
+        self.proof.verify(dleq)
     }
 }
 
@@ -164,11 +164,11 @@ pub fn decrypt_share(
         h2: lifted_yi,
     };
     let proof = dleq::Proof::create(challenge, xi, dleq);
-    return DecryptedShare {
+    DecryptedShare {
         id: share.id,
         decrypted_val: si,
-        proof: proof,
-    };
+        proof,
+    }
 }
 
 fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scalar {
@@ -183,7 +183,7 @@ fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scala
             v = v * e;
         }
     }
-    return v;
+    v
 }
 
 // Try to recover a secret
@@ -196,7 +196,7 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
         let v = interpolate_one(t, i, shares);
         result = result + shares[i].decrypted_val.mul(&v);
     }
-    return Ok(result);
+    Ok(result)
 }
 
 pub fn verify_secret(
@@ -208,8 +208,8 @@ pub fn verify_secret(
     let dleq = dleq::DLEQ {
         g1: Point::generator(),
         h1: secret,
-        g2: extra_generator.clone(),
+        g2: extra_generator,
         h2: commitments[0].point.clone(),
     };
-    return proof.verify(dleq);
+    proof.verify(dleq)
 }

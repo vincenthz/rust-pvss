@@ -1,4 +1,3 @@
-extern crate openssl;
 pub mod crypto;
 
 mod dleq;
@@ -10,11 +9,11 @@ mod types;
 
 #[cfg(test)]
 mod tests {
-    use crypto;
-    use crypto::*;
-    use dleq;
-    use scrape;
-    use simple;
+    use super::crypto;
+    use super::crypto::*;
+    use super::dleq;
+    use super::scrape;
+    use super::simple;
 
     pub const NB_TESTS: usize = 100;
     #[test]

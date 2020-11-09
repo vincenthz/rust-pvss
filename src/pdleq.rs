@@ -1,6 +1,6 @@
 // Parallel DLEQ proofs
-use crypto::*;
-use dleq;
+use super::crypto::*;
+use super::dleq;
 
 type Challenge = Scalar;
 
@@ -36,7 +36,7 @@ impl Proof {
             let z = w.clone() + a.clone() * c.clone();
             zs.push(z);
         }
-        return Proof { c: c, zs: zs };
+        Proof { c, zs }
     }
 
     pub fn verify(&self, dleqs: &[dleq::DLEQ]) -> bool {
@@ -49,8 +49,7 @@ impl Proof {
         };
 
         // recompute the challenge
-        for i in 0..self.zs.len() {
-            let z = &self.zs[i];
+        for (i, z) in self.zs.iter().enumerate() {
             let dleq = &dleqs[i];
             let r1 = dleq.g1.mul(z);
             let r2 = dleq.g2.mul(z);
@@ -65,6 +64,6 @@ impl Proof {
         his.append(&mut ais);
         let c = Scalar::hash_points(his);
 
-        return self.c == c;
+        self.c == c
     }
 }

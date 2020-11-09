@@ -1,11 +1,11 @@
 // implementation of SCRAPE: Scalable Randomness Attested by Public Entities
 // https://eprint.iacr.org/2017/216.pdf
 
-use crypto::*;
-use dleq;
-use math;
-use pdleq;
-use types::*;
+use super::crypto::*;
+use super::dleq;
+use super::math;
+use super::pdleq;
+use super::types::*;
 
 pub type Secret = Point;
 
@@ -72,23 +72,23 @@ pub fn escrow(t: Threshold) -> Escrow {
     };
     let proof = dleq::Proof::create(challenge, secret, dleq);
 
-    return Escrow {
+    Escrow {
         threshold: t,
         extra_generator: gen,
         polynomial: poly,
         secret: g_s,
-        proof: proof,
-    };
+        proof,
+    }
 }
 
-pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
+pub fn create_shares(escrow: &Escrow, pubs: &[PublicKey]) -> PublicShares {
     let n = pubs.len();
     let mut shares = Vec::with_capacity(n);
     let mut commitments = Vec::with_capacity(n);
     let mut pparams = Vec::with_capacity(n);
 
-    for i in 0..n {
-        let ref public = pubs[i];
+    for (i, public) in pubs.iter().enumerate() {
+        //let ref public = pubs[i];
         let eval_point = i + 1;
         let si = escrow
             .polynomial
@@ -117,28 +117,27 @@ pub fn create_shares(escrow: &Escrow, pubs: &Vec<PublicKey>) -> PublicShares {
     // now create the parallel proof for all shares
     let pdleq = pdleq::Proof::create(pparams.as_slice());
 
-    return PublicShares {
+    PublicShares {
         threshold: escrow.threshold,
         extra_generator: escrow.extra_generator.clone(),
         secret_proof: escrow.proof.clone(),
         encrypted_shares: shares,
-        commitments: commitments,
+        commitments,
         proofs: pdleq,
-    };
+    }
 }
 
 impl PublicShares {
     pub fn number_participants(&self) -> u32 {
-        return self.commitments.len() as u32;
+        self.commitments.len() as u32
     }
 
     pub fn verify(&self, publics: &[PublicKey]) -> bool {
         // recreate all the DLEQs
         let mut dleqs = Vec::with_capacity(publics.len());
-        for i in 0..publics.len() {
-            let ref public = publics[i];
-            let ref vi = self.commitments[i].point;
-            let ref esi = self.encrypted_shares[i].encrypted_val;
+        for (i, public) in publics.iter().enumerate() {
+            let vi = &self.commitments[i].point;
+            let esi = &self.encrypted_shares[i].encrypted_val;
             let dleq = dleq::DLEQ {
                 g1: self.extra_generator.clone(),
                 h1: vi.clone(),
@@ -167,11 +166,11 @@ impl PublicShares {
                 }
             }
 
-            let ref commitment = self.commitments[idx];
+            let commitment = &self.commitments[idx];
             v = v + commitment.point.mul(&cperp);
         }
 
-        return v == Point::infinity();
+        v == Point::infinity()
     }
 }
 
@@ -183,7 +182,7 @@ impl DecryptedShare {
             g2: self.decrypted_val.clone(),
             h2: eshare.encrypted_val.clone(),
         };
-        return self.proof.verify(dleq);
+        self.proof.verify(dleq)
     }
 }
 
@@ -204,11 +203,11 @@ pub fn decrypt_share(
         h2: lifted_yi,
     };
     let proof = dleq::Proof::create(challenge, xi, dleq);
-    return DecryptedShare {
+    DecryptedShare {
         id: share.id,
         decrypted_val: si,
-        proof: proof,
-    };
+        proof,
+    }
 }
 
 fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scalar {
@@ -221,7 +220,7 @@ fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scala
             v = v * sj * d.inverse();
         }
     }
-    return v;
+    v
 }
 
 // Try to recover a secret
@@ -234,7 +233,7 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
         let v = interpolate_one(t, i, shares);
         result = result + shares[i].decrypted_val.mul(&v);
     }
-    return Ok(result);
+    Ok(result)
 }
 
 pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
@@ -261,5 +260,5 @@ pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
         g2: public_shares.extra_generator.clone(),
         h2: commitment_interpolate,
     };
-    return public_shares.secret_proof.verify(dleq);
+    public_shares.secret_proof.verify(dleq)
 }
