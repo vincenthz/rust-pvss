@@ -1,5 +1,4 @@
-rust-pvss
-=========
+# rust-pvss
 
 [![Build Status](https://img.shields.io/travis/vincenthz/rust-pvss.svg)](https://travis-ci.org/vincenthz/rust-pvss)
 
@@ -16,8 +15,7 @@ Publicly Verifiable Secret Sharing (PVSS) scheme implemented:
 * [Schoenmaker](http://www.win.tue.nl/~berry/papers/crypto99.pdf)
 * [SCRAPE](https://eprint.iacr.org/2017/216.pdf)
 
-Crypto
-------
+## Crypto
 
 For now the implementation uses the P256R1 elliptic curve by default, through
 the rust-openssl package.  In the future, the plan is to add support for all
