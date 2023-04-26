@@ -8,10 +8,18 @@ repository = "https://github.com/vincenthz/rust-pvss"
 license = "MIT"
 keywords = [ "Crypto", "Cryptography", "Secret", "Sharing" ]
 categories = [ "cryptography" ]
-edition = "2018"
+edition = "2021"
 
 [lib]
 name = "pvss"
 
 [dependencies]
-openssl = "0.10"
+openssl = { version = "0.10", optional = true }
+eccoxide = { version = "0.3", optional = true }
+cryptoxide = { version = "0.4", optional = true }
+getrandom = { version = "0.2", optional = true }
+
+[features]
+default = ["eccoxide"]
+openssl = ["dep:openssl"]
+eccoxide = ["dep:eccoxide", "dep:cryptoxide", "dep:getrandom"]
