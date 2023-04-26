@@ -1,7 +1,20 @@
-rust-pvss
-=========
+# Rust PVSS (Publicly Verifiable Secret Sharing)
 
-[![Build Status](https://img.shields.io/travis/vincenthz/rust-pvss.svg)](https://travis-ci.org/vincenthz/rust-pvss)
+[![Crates.io][crates-badge]][crates-url]
+[![MIT licensed][mit-badge]][mit-url]
+[![APACHE-2 licensed][apache2-badge]][apache2-url]
+[![Build Status][actions-badge]][actions-url]
+
+[crates-badge]: https://img.shields.io/crates/v/pvss.svg
+[crates-url]: https://crates.io/crates/pvss
+[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[apache2-badge]: https://img.shields.io/badge/license-APACHE--2-blue.svg
+[mit-url]: https://github.com/vincenthz/rust-pvss/blob/master/LICENSE-MIT
+[apache2-url]: https://github.com/vincenthz/rust-pvss/blob/master/LICENSE-APACHE
+[actions-badge]: https://github.com/vincenthz/rust-pvss/workflows/CI/badge.svg
+[actions-url]: https://github.com/vincenthz/rust-pvss/actions?query=workflow%3ACI+branch%3Amaster
+
+[API Docs](https://docs.rs/pvss/latest/pvss)
 
 This package provide secret sharing schemes which are publicly veriable and recoverable
 using a simple `t` out of `n` `(t,n)` threshold system.
