@@ -1,4 +1,5 @@
 use cryptoxide::drg::chacha;
+use cryptoxide::hashing::sha2::Sha256;
 use eccoxide::curve::sec2::p256r1 as curve;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -231,6 +232,47 @@ impl Point {
     pub fn generator() -> Point {
         Point {
             point: curve::Point::generator(),
+        }
+    }
+
+    pub fn try_hash_to_curve(slice: &[u8]) -> Option<Point> {
+        let out = Sha256::new().update(slice).finalize();
+        if let Some(x) = curve::FieldElement::from_bytes(&out) {
+            if let Some(p) = curve::PointAffine::decompress(&x, eccoxide::curve::Sign::Positive) {
+                return Some(Self {
+                    point: curve::Point::from_affine(&p),
+                });
+            }
+        }
+        None
+    }
+
+    pub fn hash_to_curve(slice: &[u8]) -> Point {
+        let mut counter_slice = [0u8];
+        loop {
+            let out = Sha256::new()
+                .update(slice)
+                .update(&counter_slice)
+                .finalize();
+            if let Some(x) = curve::FieldElement::from_bytes(&out) {
+                if let Some(p) = curve::PointAffine::decompress(&x, eccoxide::curve::Sign::Positive)
+                {
+                    return Self {
+                        point: curve::Point::from_affine(&p),
+                    };
+                }
+            }
+
+            counter_slice[0] = counter_slice[0] + 1;
+        }
+    }
+
+    pub fn random_generator(drg: &mut Drg) -> Point {
+        loop {
+            let out = drg.0.bytes::<32>();
+            if let Some(point) = Self::try_hash_to_curve(&out) {
+                return point;
+            }
         }
     }
 

@@ -40,7 +40,7 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     assert!(t >= 1, "threshold is invalid; < 1");
 
     let poly = math::Polynomial::generate(drg, t - 1);
-    let gen = Point::from_scalar(&Scalar::generate(drg));
+    let gen = Point::random_generator(drg);
 
     let secret = poly.at_zero();
     let g_s = Point::from_scalar(&secret);
