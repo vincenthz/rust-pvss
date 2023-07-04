@@ -54,23 +54,23 @@ pub struct DecryptedShare {
 
 // create a new escrow parameter.
 // the only parameter needed is the threshold necessary to be able to reconstruct.
-pub fn escrow(t: Threshold) -> Escrow {
+pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     assert!(t >= 1, "threshold is invalid; < 1");
 
-    let poly = math::Polynomial::generate(t - 1);
-    let gen = Point::from_scalar(&Scalar::generate());
+    let poly = math::Polynomial::generate(drg, t - 1);
+    let gen = Point::from_scalar(&Scalar::generate(drg));
 
     let secret = poly.at_zero();
     let g_s = Point::from_scalar(&secret);
 
-    let challenge = Scalar::generate();
+    let challenge = Scalar::generate(drg);
     let dleq = dleq::DLEQ {
         g1: Point::generator(),
         h1: g_s.clone(),
         g2: gen.clone(),
         h2: gen.mul(&secret),
     };
-    let proof = dleq::Proof::create(challenge, secret, dleq);
+    let proof = dleq::Proof::create(&challenge, &secret, dleq);
 
     Escrow {
         threshold: t,
@@ -81,7 +81,7 @@ pub fn escrow(t: Threshold) -> Escrow {
     }
 }
 
-pub fn create_shares(escrow: &Escrow, pubs: &[PublicKey]) -> PublicShares {
+pub fn create_shares(drg: &mut Drg, escrow: &Escrow, pubs: &[PublicKey]) -> PublicShares {
     let n = pubs.len();
     let mut shares = Vec::with_capacity(n);
     let mut commitments = Vec::with_capacity(n);
@@ -103,7 +103,7 @@ pub fn create_shares(escrow: &Escrow, pubs: &[PublicKey]) -> PublicShares {
         commitments.push(Commitment { point: vi.clone() });
 
         {
-            let w = Scalar::generate();
+            let w = Scalar::generate(drg);
             let dleq = dleq::DLEQ {
                 g1: escrow.extra_generator.clone(),
                 h1: vi,
@@ -132,7 +132,7 @@ impl PublicShares {
         self.commitments.len() as u32
     }
 
-    pub fn verify(&self, publics: &[PublicKey]) -> bool {
+    pub fn verify(&self, drg: &mut Drg, publics: &[PublicKey]) -> bool {
         // recreate all the DLEQs
         let mut dleqs = Vec::with_capacity(publics.len());
         for (i, public) in publics.iter().enumerate() {
@@ -153,7 +153,7 @@ impl PublicShares {
 
         // reed solomon check
         let n = self.number_participants();
-        let poly = math::Polynomial::generate(n - self.threshold - 1);
+        let poly = math::Polynomial::generate(drg, n - self.threshold - 1);
 
         let mut v = Point::infinity();
         for i in 0..n {
@@ -182,16 +182,17 @@ impl DecryptedShare {
             g2: self.decrypted_val.clone(),
             h2: eshare.encrypted_val.clone(),
         };
-        self.proof.verify(dleq)
+        self.proof.verify(&dleq)
     }
 }
 
 pub fn decrypt_share(
+    drg: &mut Drg,
     private: &PrivateKey,
     public: &PublicKey,
     share: &EncryptedShare,
 ) -> DecryptedShare {
-    let challenge = Scalar::generate();
+    let challenge = Scalar::generate(drg);
     let xi = private.scalar.clone();
     let yi = public.point.clone();
     let lifted_yi = share.encrypted_val.clone();
@@ -202,7 +203,7 @@ pub fn decrypt_share(
         g2: si.clone(),
         h2: lifted_yi,
     };
-    let proof = dleq::Proof::create(challenge, xi, dleq);
+    let proof = dleq::Proof::create(&challenge, &xi, dleq);
     DecryptedShare {
         id: share.id,
         decrypted_val: si,
@@ -260,5 +261,5 @@ pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
         g2: public_shares.extra_generator.clone(),
         h2: commitment_interpolate,
     };
-    public_shares.secret_proof.verify(dleq)
+    public_shares.secret_proof.verify(&dleq)
 }

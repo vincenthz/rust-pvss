@@ -36,23 +36,23 @@ pub struct DecryptedShare {
 
 // create a new escrow parameter.
 // the only parameter needed is the threshold necessary to be able to reconstruct.
-pub fn escrow(t: Threshold) -> Escrow {
+pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     assert!(t >= 1, "threshold is invalid; < 1");
 
-    let poly = math::Polynomial::generate(t - 1);
-    let gen = Point::from_scalar(&Scalar::generate());
+    let poly = math::Polynomial::generate(drg, t - 1);
+    let gen = Point::from_scalar(&Scalar::generate(drg));
 
     let secret = poly.at_zero();
     let g_s = Point::from_scalar(&secret);
 
-    let challenge = Scalar::generate();
+    let challenge = Scalar::generate(drg);
     let dleq = dleq::DLEQ {
         g1: Point::generator(),
         h1: g_s.clone(),
         g2: gen.clone(),
         h2: gen.mul(&secret),
     };
-    let proof = dleq::Proof::create(challenge, secret, dleq);
+    let proof = dleq::Proof::create(&challenge, &secret, dleq);
 
     Escrow {
         extra_generator: gen,
@@ -74,11 +74,16 @@ pub fn commitments(escrow: &Escrow) -> Vec<Commitment> {
     commitments
 }
 
-pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> EncryptedShare {
+pub fn create_share(
+    drg: &mut Drg,
+    escrow: &Escrow,
+    share_id: ShareId,
+    public: &PublicKey,
+) -> EncryptedShare {
     assert!(share_id != 0, "trying to create a share with id = 0");
 
     let peval = escrow.polynomial.evaluate(Scalar::from_u32(share_id));
-    let challenge = Scalar::generate();
+    let challenge = Scalar::generate(drg);
     let xi = escrow.extra_generator.mul(&peval);
     let yi = public.point.mul(&peval);
     let dleq = dleq::DLEQ {
@@ -87,7 +92,7 @@ pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> E
         g2: public.point.clone(),
         h2: yi.clone(),
     };
-    let proof = dleq::Proof::create(challenge, peval, dleq);
+    let proof = dleq::Proof::create(&challenge, &peval, dleq);
     EncryptedShare {
         id: share_id,
         encrypted_val: yi,
@@ -95,14 +100,14 @@ pub fn create_share(escrow: &Escrow, share_id: ShareId, public: &PublicKey) -> E
     }
 }
 
-pub fn create_shares<I, K>(escrow: &Escrow, pubs: I) -> Vec<EncryptedShare>
+pub fn create_shares<I, K>(drg: &mut Drg, escrow: &Escrow, pubs: I) -> Vec<EncryptedShare>
 where
     I: IntoIterator<Item = K>,
     K: Borrow<PublicKey>,
 {
     pubs.into_iter()
         .enumerate()
-        .map(|(i, pub_key)| create_share(escrow, (i + 1) as ShareId, pub_key.borrow()))
+        .map(|(i, pub_key)| create_share(drg, escrow, (i + 1) as ShareId, pub_key.borrow()))
         .collect()
 }
 
@@ -130,7 +135,7 @@ impl EncryptedShare {
             g2: public.point.clone(),
             h2: self.encrypted_val.clone(),
         };
-        self.proof.verify(dleq)
+        self.proof.verify(&dleq)
     }
 }
 
@@ -142,17 +147,18 @@ impl DecryptedShare {
             g2: self.decrypted_val.clone(),
             h2: eshare.encrypted_val.clone(),
         };
-        self.proof.verify(dleq)
+        self.proof.verify(&dleq)
     }
 }
 
 pub fn decrypt_share(
+    drg: &mut Drg,
     private: &PrivateKey,
     public: &PublicKey,
     share: &EncryptedShare,
 ) -> DecryptedShare {
-    let challenge = Scalar::generate();
-    let xi = private.scalar.clone();
+    let challenge = Scalar::generate(drg);
+    let xi = &private.scalar;
     let yi = public.point.clone();
     let lifted_yi = share.encrypted_val.clone();
     let xi_inverse = xi.inverse();
@@ -163,7 +169,7 @@ pub fn decrypt_share(
         g2: si.clone(),
         h2: lifted_yi,
     };
-    let proof = dleq::Proof::create(challenge, xi, dleq);
+    let proof = dleq::Proof::create(&challenge, xi, dleq);
     DecryptedShare {
         id: share.id,
         decrypted_val: si,
@@ -177,7 +183,7 @@ fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scala
         if j != sid {
             let sj = Scalar::from_u32(shares[j].id);
             let si = Scalar::from_u32(shares[sid].id);
-            let d = sj.clone() - si;
+            let d = &sj - &si;
             let dinv = d.inverse();
             let e = sj * dinv;
             v = v * e;
@@ -211,5 +217,5 @@ pub fn verify_secret(
         g2: extra_generator,
         h2: commitments[0].point.clone(),
     };
-    proof.verify(dleq)
+    proof.verify(&dleq)
 }

@@ -34,10 +34,12 @@ impl<T: AsRef<[u8]>> ToPretty for T {
 fn main() {
     let t = 10;
 
+    let mut drg = pvss::crypto::Drg::new();
+
     let mut keys = Vec::with_capacity(100);
     let mut pubs = Vec::with_capacity(100);
     for _ in 0..100 {
-        let (public, private) = pvss::crypto::create_keypair();
+        let (public, private) = pvss::crypto::create_keypair(&mut drg);
 
         keys.push(private);
         pubs.push(public);
@@ -55,10 +57,10 @@ fn main() {
     let priv_0 = pvss::crypto::PrivateKey::from_bytes(&priv_bytes);
     assert!(priv_0 == keys[1]);
 
-    let escrow = pvss::simple::escrow(t);
+    let escrow = pvss::simple::escrow(&mut drg, t);
 
     let commitments = pvss::simple::commitments(&escrow);
-    let shares = pvss::simple::create_shares(&escrow, &pubs);
+    let shares = pvss::simple::create_shares(&mut drg, &escrow, &pubs);
 
     let mut decrypted = Vec::with_capacity(100);
 
@@ -75,7 +77,7 @@ fn main() {
             verified = verified_encrypted
         );
 
-        let d = pvss::simple::decrypt_share(&keys[idx], &pubs[idx], &share);
+        let d = pvss::simple::decrypt_share(&mut drg, &keys[idx], &pubs[idx], &share);
         let verified_decrypted = d.verify(&pubs[idx], &share);
         println!(
             "decrypted share {id}: {verified}",

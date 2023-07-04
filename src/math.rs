@@ -6,12 +6,12 @@ pub struct Polynomial {
 }
 impl Polynomial {
     /// generate a new polynomial of specific degree
-    pub fn generate(degree: u32) -> Polynomial {
+    pub fn generate(drg: &mut crypto::Drg, degree: u32) -> Polynomial {
         let vec_size = degree + 1;
         let mut vec = Vec::with_capacity(vec_size as usize);
 
         for _ in 0..vec_size {
-            let r = crypto::Scalar::generate();
+            let r = crypto::Scalar::generate(drg);
             vec.push(r)
         }
         Polynomial { elements: vec }

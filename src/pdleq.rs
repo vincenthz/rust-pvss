@@ -12,23 +12,24 @@ pub struct Proof {
 
 impl Proof {
     pub fn create(params: &[(Scalar, Scalar, dleq::DLEQ)]) -> Proof {
-        let mut his = Vec::with_capacity(params.len() * 4);
+        //let mut his = Vec::with_capacity(params.len() * 4);
         let mut ais = Vec::with_capacity(params.len() * 2);
         let mut zs = Vec::with_capacity(params.len());
+
+        let mut hasher = PointHasher::new();
 
         // create the list [h1_1 ,h2_1 , h1_2 , h2_2, ... h2_n, a1_1, a2_1, .., a1_n, a2_n ]
         // to compute the challenge
         for param in params.iter() {
             let &(ref w, _, ref dleq) = param;
-            his.push(dleq.h1.clone());
-            his.push(dleq.h2.clone());
+            hasher = hasher.update(&dleq.h1).update(&dleq.h2);
+
             ais.push(dleq.g1.mul(&w));
             ais.push(dleq.g2.mul(&w));
         }
 
         // compute the challenge
-        his.append(&mut ais);
-        let c = Scalar::hash_points(his);
+        let c = hasher.update_iter(ais.iter()).finalize();
 
         // finally create each proofs
         for param in params.iter() {
@@ -40,13 +41,15 @@ impl Proof {
     }
 
     pub fn verify(&self, dleqs: &[dleq::DLEQ]) -> bool {
-        let mut his = Vec::new();
+        //let mut his = Vec::new();
         let mut ais = Vec::new();
 
         if dleqs.len() != self.zs.len() {
             // FIXME probably an Err() .. instead of silent verify failure
             return false;
         };
+
+        let mut hasher = PointHasher::new();
 
         // recompute the challenge
         for (i, z) in self.zs.iter().enumerate() {
@@ -55,14 +58,13 @@ impl Proof {
             let r2 = dleq.g2.mul(z);
             let a1 = r1 - dleq.h1.mul(&self.c);
             let a2 = r2 - dleq.h2.mul(&self.c);
-            his.push(dleq.h1.clone());
-            his.push(dleq.h2.clone());
+
+            hasher = hasher.update(&dleq.h1).update(&dleq.h2);
             ais.push(a1);
             ais.push(a2);
         }
 
-        his.append(&mut ais);
-        let c = Scalar::hash_points(his);
+        let c = hasher.update_iter(ais.iter()).finalize();
 
         self.c == c
     }

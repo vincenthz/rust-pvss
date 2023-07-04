@@ -17,19 +17,30 @@ pub struct Proof {
 }
 
 impl Proof {
-    pub fn create(w: Scalar, a: Scalar, dleq: DLEQ) -> Proof {
+    pub fn create(w: &Scalar, a: &Scalar, dleq: DLEQ) -> Proof {
         let a1 = dleq.g1.mul(&w);
         let a2 = dleq.g2.mul(&w);
-        let c = Scalar::hash_points(vec![dleq.h1, dleq.h2, a1, a2]);
-        let r = w + a * c.clone();
+        let c = PointHasher::new()
+            .update(&dleq.h1)
+            .update(&dleq.h2)
+            .update(&a1)
+            .update(&a2)
+            .finalize();
+        let r = w + &(a * &c);
         Proof { c, z: r }
     }
 
-    pub fn verify(&self, dleq: DLEQ) -> bool {
+    pub fn verify(&self, dleq: &DLEQ) -> bool {
         let r1 = dleq.g1.mul(&self.z);
         let r2 = dleq.g2.mul(&self.z);
         let a1 = r1 - dleq.h1.mul(&self.c);
         let a2 = r2 - dleq.h2.mul(&self.c);
-        self.c == Scalar::hash_points(vec![dleq.h1, dleq.h2, a1, a2])
+        let c = PointHasher::new()
+            .update(&dleq.h1)
+            .update(&dleq.h2)
+            .update(&a1)
+            .update(&a2)
+            .finalize();
+        self.c == c
     }
 }

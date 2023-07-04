@@ -1,3 +1,4 @@
+use cryptoxide::drg::chacha;
 use eccoxide::curve::sec2::p256r1 as curve;
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -7,6 +8,21 @@ use std::ops::Sub;
 // currently hardcode curve to P256R1, but in the future probably a good idea
 // to generalize the interface, and make it more generics (with generics for all crypto types)
 //pub const CURVE: openssl::nid::Nid = openssl::nid::Nid::X9_62_PRIME256V1;
+
+pub struct Drg(chacha::Drg<8>);
+
+impl Drg {
+    pub fn new() -> Self {
+        loop {
+            let mut out = [0u8; 32];
+            if let Err(_) = getrandom::getrandom(&mut out) {
+                continue;
+            }
+            let drg = chacha::Drg::new(&out);
+            return Drg(drg);
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Scalar {
@@ -47,15 +63,53 @@ impl PrivateKey {
 
     pub fn from_bytes(bytes: &[u8]) -> PrivateKey {
         PrivateKey {
-            scalar: Scalar::from_bytes(bytes).unwrap(),
+            scalar: Scalar::from_slice(bytes).unwrap(),
         }
     }
 }
 
-pub fn create_keypair() -> (PublicKey, PrivateKey) {
-    let s = Scalar::generate();
+pub fn create_keypair(drg: &mut Drg) -> (PublicKey, PrivateKey) {
+    let s = Scalar::generate(drg);
     let p = Point::from_scalar(&s);
     (PublicKey { point: p }, PrivateKey { scalar: s })
+}
+
+pub struct PointHasher {
+    context: cryptoxide::hashing::sha2::Context256,
+}
+
+impl PointHasher {
+    pub fn new() -> Self {
+        PointHasher {
+            context: cryptoxide::hashing::sha2::Context256::new(),
+        }
+    }
+
+    pub fn update_mut(&mut self, p: &Point) {
+        self.context.update_mut(&p.to_bytes());
+    }
+
+    pub fn update(self, p: &Point) -> Self {
+        Self {
+            context: self.context.update(&p.to_bytes()),
+        }
+    }
+
+    pub fn update_iter<'a, I: Iterator<Item = &'a Point>>(self, it: I) -> Self {
+        let mut context = self.context;
+        for i in it {
+            context = context.update(&i.to_bytes())
+        }
+        Self { context }
+    }
+
+    pub fn finalize(self) -> Scalar {
+        let dig = self.context.finalize();
+        // TODO need to modularise dig !
+        Scalar {
+            bn: curve::Scalar::from_bytes(&dig).unwrap(),
+        }
+    }
 }
 
 impl Scalar {
@@ -64,12 +118,10 @@ impl Scalar {
             bn: curve::Scalar::from_u64(v as u64),
         }
     }
-    pub fn generate() -> Scalar {
+
+    pub fn generate(drg: &mut Drg) -> Scalar {
         loop {
-            let mut out = [0u8; 32];
-            if let Err(_) = getrandom::getrandom(&mut out) {
-                continue;
-            }
+            let out = drg.0.bytes();
             if let Some(scalar) = Scalar::from_bytes(&out) {
                 return scalar;
             }
@@ -80,7 +132,7 @@ impl Scalar {
         Self::from_u32(1)
     }
 
-    pub fn hash_points(points: Vec<Point>) -> Scalar {
+    pub fn hash_points(points: Vec<&Point>) -> Scalar {
         let mut context = cryptoxide::hashing::sha2::Context256::new();
 
         for p in points {
@@ -105,26 +157,29 @@ impl Scalar {
         }
     }
 
-    pub fn from_bytes(slice: &[u8]) -> Option<Scalar> {
+    pub fn from_bytes(bytes: &[u8; 32]) -> Option<Scalar> {
+        curve::Scalar::from_bytes(bytes).map(|s| Scalar { bn: s })
+    }
+
+    pub fn from_slice(slice: &[u8]) -> Option<Scalar> {
         let bytes = <&[u8; 32]>::try_from(slice).ok()?;
         curve::Scalar::from_bytes(bytes).map(|s| Scalar { bn: s })
     }
 }
 
-/*
-impl Clone for Scalar {
-    fn clone(&self) -> Scalar {
-        Scalar {
-            bn: BigNum::from_slice(&self.bn.to_vec()).unwrap(),
-        }
-    }
-}
-*/
-
 impl Add for Scalar {
     type Output = Self;
     fn add(self, s: Self) -> Self {
         Scalar { bn: self.bn + s.bn }
+    }
+}
+
+impl<'a> Add for &'a Scalar {
+    type Output = Scalar;
+    fn add(self, s: Self) -> Self::Output {
+        Scalar {
+            bn: &self.bn + &s.bn,
+        }
     }
 }
 
@@ -135,10 +190,28 @@ impl Sub for Scalar {
     }
 }
 
+impl<'a> Sub for &'a Scalar {
+    type Output = Scalar;
+    fn sub(self, s: Self) -> Self::Output {
+        Scalar {
+            bn: &self.bn - &s.bn,
+        }
+    }
+}
+
 impl Mul for Scalar {
     type Output = Self;
     fn mul(self, s: Self) -> Self {
         Scalar { bn: self.bn * s.bn }
+    }
+}
+
+impl<'a> Mul for &'a Scalar {
+    type Output = Scalar;
+    fn mul(self, s: Self) -> Self::Output {
+        Scalar {
+            bn: &self.bn * &s.bn,
+        }
     }
 }
 
