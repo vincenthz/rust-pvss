@@ -56,7 +56,7 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
         g2: &gen,
         h2: &gen.mul(&secret),
     };
-    let proof = dleq::Proof::create(&challenge, &secret, dleq);
+    let proof = dleq::Proof::create(&challenge, &secret, &dleq);
 
     Escrow {
         extra_generator: gen,
@@ -94,7 +94,7 @@ pub fn create_share(
         g2: &public.point,
         h2: &yi,
     };
-    let proof = dleq::Proof::create(&challenge, &peval, dleq);
+    let proof = dleq::Proof::create(&challenge, &peval, &dleq);
     EncryptedShare {
         id: share_id,
         encrypted_val: yi,
@@ -161,8 +161,8 @@ pub fn decrypt_share(
 ) -> DecryptedShare {
     let challenge = Scalar::generate(drg);
     let xi = &private.scalar;
-    let yi = public.point.clone();
-    let lifted_yi = share.encrypted_val.clone();
+    let yi = &public.point;
+    let lifted_yi = &share.encrypted_val;
     let xi_inverse = xi.inverse();
     let si = lifted_yi.mul(&xi_inverse);
     let dleq = dleq::DLEQ {
@@ -171,7 +171,7 @@ pub fn decrypt_share(
         g2: &si,
         h2: &lifted_yi,
     };
-    let proof = dleq::Proof::create(&challenge, xi, dleq);
+    let proof = dleq::Proof::create(&challenge, xi, &dleq);
     DecryptedShare {
         id: share.id,
         decrypted_val: si,

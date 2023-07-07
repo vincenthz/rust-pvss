@@ -71,11 +71,11 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     let challenge = Scalar::generate(drg);
     let dleq = dleq::DLEQ {
         g1: &Point::generator(),
-        h1: &g_s.clone(),
-        g2: &gen.clone(),
+        h1: &g_s,
+        g2: &gen,
         h2: &gen.mul(&secret),
     };
-    let proof = dleq::Proof::create(&challenge, &secret, dleq);
+    let proof = dleq::Proof::create(&challenge, &secret, &dleq);
 
     Escrow {
         threshold: t,
@@ -203,9 +203,9 @@ pub fn decrypt_share(
     share: &EncryptedShare,
 ) -> DecryptedShare {
     let challenge = Scalar::generate(drg);
-    let xi = private.scalar.clone();
-    let yi = public.point.clone();
-    let lifted_yi = share.encrypted_val.clone();
+    let xi = &private.scalar;
+    let yi = &public.point;
+    let lifted_yi = &share.encrypted_val;
     let si = lifted_yi.mul(&xi.inverse());
     let dleq = dleq::DLEQ {
         g1: &Point::generator(),
@@ -213,7 +213,7 @@ pub fn decrypt_share(
         g2: &si,
         h2: &lifted_yi,
     };
-    let proof = dleq::Proof::create(&challenge, &xi, dleq);
+    let proof = dleq::Proof::create(&challenge, &xi, &dleq);
     DecryptedShare {
         id: share.id,
         decrypted_val: si,
@@ -227,7 +227,7 @@ fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scala
         if j != sid {
             let sj = shares[j].id.to_scalar();
             let si = shares[sid].id.to_scalar();
-            let d = sj.clone() - si;
+            let d = &sj - &si;
             v = v * sj * d.inverse();
         }
     }
@@ -250,14 +250,14 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
 pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
     let mut commitment_interpolate = Point::infinity();
     for i in 0..(public_shares.threshold as usize) {
-        let x = public_shares.commitments[i].point.clone();
+        let x = &public_shares.commitments[i].point;
         let li = {
             let mut v = Scalar::multiplicative_identity();
             for j in 0..(public_shares.threshold as usize) {
                 if j != i {
                     let sj = Scalar::from_u32((j + 1) as u32);
                     let si = Scalar::from_u32((i + 1) as u32);
-                    let d = sj.clone() - si;
+                    let d = &sj - &si;
                     v = v * sj * d.inverse();
                 }
             }

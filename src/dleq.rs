@@ -18,7 +18,7 @@ pub struct Proof {
 }
 
 impl Proof {
-    pub fn create(w: &Scalar, a: &Scalar, dleq: DLEQ) -> Proof {
+    pub fn create(w: &Scalar, a: &Scalar, dleq: &DLEQ) -> Proof {
         let a1 = dleq.g1.mul(&w);
         let a2 = dleq.g2.mul(&w);
         let c = PointHasher::new()

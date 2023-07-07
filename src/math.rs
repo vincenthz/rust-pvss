@@ -32,7 +32,7 @@ impl Polynomial {
         }
         r
     }
-    pub fn at_zero(&self) -> crypto::Scalar {
-        self.elements[0].clone()
+    pub fn at_zero(&self) -> &crypto::Scalar {
+        &self.elements[0]
     }
 }

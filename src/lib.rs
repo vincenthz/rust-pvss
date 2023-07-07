@@ -55,7 +55,7 @@ mod tests {
                 g2: &extra_gen,
                 h2: &lifted_extra_a,
             };
-            let proof = dleq::Proof::create(&w, &a, dleq.clone());
+            let proof = dleq::Proof::create(&w, &a, &dleq);
             assert!(proof.verify(&dleq));
         }
     }
