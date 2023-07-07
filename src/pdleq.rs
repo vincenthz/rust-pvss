@@ -11,7 +11,7 @@ pub struct Proof {
 }
 
 impl Proof {
-    pub fn create(params: &[(Scalar, Scalar, dleq::DLEQ)]) -> Proof {
+    pub fn create(params: &[(Scalar, &Scalar, dleq::DLEQ)]) -> Proof {
         //let mut his = Vec::with_capacity(params.len() * 4);
         let mut zs = Vec::with_capacity(params.len());
 
@@ -32,9 +32,8 @@ impl Proof {
         let c = hasher.finalize();
 
         // finally create each proofs
-        for param in params.iter() {
-            let &(ref w, ref a, _) = param;
-            let z = w.clone() + a.clone() * c.clone();
+        for (w, a, _) in params.iter() {
+            let z = w + &(*a * &c);
             zs.push(z);
         }
         Proof { c, zs }

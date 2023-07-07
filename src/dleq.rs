@@ -4,12 +4,13 @@ use super::crypto::*;
 type Challenge = Scalar;
 
 #[derive(Clone)]
-pub struct DLEQ {
-    pub g1: Point,
-    pub h1: Point,
-    pub g2: Point,
-    pub h2: Point,
+pub struct DLEQ<'a, 'b, 'c, 'd> {
+    pub g1: &'a Point,
+    pub h1: &'b Point,
+    pub g2: &'c Point,
+    pub h2: &'d Point,
 }
+
 #[derive(Clone)]
 pub struct Proof {
     c: Challenge,

@@ -25,8 +25,8 @@ impl Polynomial {
     pub fn evaluate(&self, at: crypto::Scalar) -> crypto::Scalar {
         let mut r = crypto::Scalar::from_u32(0);
         for degree in 0..(self.elements.len()) {
-            let v = self.elements[degree].clone();
-            r = r + v * at.pow(degree as u32);
+            let v = &self.elements[degree];
+            r = r + v * &at.pow(degree as u32);
         }
         r
     }

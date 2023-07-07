@@ -47,10 +47,10 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
 
     let challenge = Scalar::generate(drg);
     let dleq = dleq::DLEQ {
-        g1: Point::generator(),
-        h1: g_s.clone(),
-        g2: gen.clone(),
-        h2: gen.mul(&secret),
+        g1: &Point::generator(),
+        h1: &g_s,
+        g2: &gen,
+        h2: &gen.mul(&secret),
     };
     let proof = dleq::Proof::create(&challenge, &secret, dleq);
 
@@ -80,17 +80,15 @@ pub fn create_share(
     share_id: ShareId,
     public: &PublicKey,
 ) -> EncryptedShare {
-    assert!(share_id != 0, "trying to create a share with id = 0");
-
-    let peval = escrow.polynomial.evaluate(Scalar::from_u32(share_id));
+    let peval = escrow.polynomial.evaluate(share_id.to_scalar());
     let challenge = Scalar::generate(drg);
     let xi = escrow.extra_generator.mul(&peval);
     let yi = public.point.mul(&peval);
     let dleq = dleq::DLEQ {
-        g1: escrow.extra_generator.clone(),
-        h1: xi,
-        g2: public.point.clone(),
-        h2: yi.clone(),
+        g1: &escrow.extra_generator,
+        h1: &xi,
+        g2: &public.point,
+        h2: &yi,
     };
     let proof = dleq::Proof::create(&challenge, &peval, dleq);
     EncryptedShare {
@@ -105,17 +103,17 @@ where
     I: IntoIterator<Item = K>,
     K: Borrow<PublicKey>,
 {
-    pubs.into_iter()
-        .enumerate()
-        .map(|(i, pub_key)| create_share(drg, escrow, (i + 1) as ShareId, pub_key.borrow()))
+    ShareIdsSequence::new()
+        .zip(pubs.into_iter())
+        .map(|(i, pub_key)| create_share(drg, escrow, i, pub_key.borrow()))
         .collect()
 }
 
 fn create_xi(id: ShareId, commitments: &[Commitment]) -> Point {
     let mut r = Point::infinity();
     for (j, com) in commitments.iter().enumerate() {
-        let e = Scalar::from_u32(id).pow(j as u32);
-        r = r.clone() + (com.point.mul(&e));
+        let e = id.to_scalar().pow(j as u32);
+        r = r + com.point.mul(&e);
     }
     r
 }
@@ -130,10 +128,10 @@ impl EncryptedShare {
     ) -> bool {
         let xi = create_xi(id, commitments);
         let dleq = dleq::DLEQ {
-            g1: extra_generator.clone(),
-            h1: xi,
-            g2: public.point.clone(),
-            h2: self.encrypted_val.clone(),
+            g1: &extra_generator,
+            h1: &xi,
+            g2: &public.point,
+            h2: &self.encrypted_val,
         };
         self.proof.verify(&dleq)
     }
@@ -142,10 +140,10 @@ impl EncryptedShare {
 impl DecryptedShare {
     pub fn verify(&self, public: &PublicKey, eshare: &EncryptedShare) -> bool {
         let dleq = dleq::DLEQ {
-            g1: Point::generator(),
-            h1: public.point.clone(),
-            g2: self.decrypted_val.clone(),
-            h2: eshare.encrypted_val.clone(),
+            g1: &Point::generator(),
+            h1: &public.point,
+            g2: &self.decrypted_val,
+            h2: &eshare.encrypted_val,
         };
         self.proof.verify(&dleq)
     }
@@ -164,10 +162,10 @@ pub fn decrypt_share(
     let xi_inverse = xi.inverse();
     let si = lifted_yi.mul(&xi_inverse);
     let dleq = dleq::DLEQ {
-        g1: Point::generator(),
-        h1: yi,
-        g2: si.clone(),
-        h2: lifted_yi,
+        g1: &Point::generator(),
+        h1: &yi,
+        g2: &si,
+        h2: &lifted_yi,
     };
     let proof = dleq::Proof::create(&challenge, xi, dleq);
     DecryptedShare {
@@ -181,8 +179,8 @@ fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scala
     let mut v = Scalar::from_u32(1);
     for j in 0..(t as usize) {
         if j != sid {
-            let sj = Scalar::from_u32(shares[j].id);
-            let si = Scalar::from_u32(shares[sid].id);
+            let sj = shares[j].id.to_scalar();
+            let si = shares[sid].id.to_scalar();
             let d = &sj - &si;
             let dinv = d.inverse();
             let e = sj * dinv;
@@ -212,10 +210,10 @@ pub fn verify_secret(
     proof: dleq::Proof,
 ) -> bool {
     let dleq = dleq::DLEQ {
-        g1: Point::generator(),
-        h1: secret,
-        g2: extra_generator,
-        h2: commitments[0].point.clone(),
+        g1: &Point::generator(),
+        h1: &secret,
+        g2: &extra_generator,
+        h2: &commitments[0].point,
     };
     proof.verify(&dleq)
 }

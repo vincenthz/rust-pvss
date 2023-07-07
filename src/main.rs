@@ -68,11 +68,11 @@ fn main() {
     println!("shares: {nb_shares}", nb_shares = shares.len());
 
     for share in shares {
-        let idx = (share.id - 1) as usize;
+        let idx = share.id.as_index();
         let verified_encrypted =
             share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
         println!(
-            "encrypted share {id}: {verified}",
+            "encrypted share {id:?}: {verified}",
             id = share.id,
             verified = verified_encrypted
         );
@@ -80,7 +80,7 @@ fn main() {
         let d = pvss::simple::decrypt_share(&mut drg, &keys[idx], &pubs[idx], &share);
         let verified_decrypted = d.verify(&pubs[idx], &share);
         println!(
-            "decrypted share {id}: {verified}",
+            "decrypted share {id:?}: {verified}",
             id = share.id,
             verified = verified_decrypted
         );

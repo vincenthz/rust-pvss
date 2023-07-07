@@ -50,10 +50,10 @@ mod tests {
             let lifted_extra_a = extra_gen.mul(&a);
 
             let dleq = dleq::DLEQ {
-                g1: Point::generator(),
-                h1: lifted_a,
-                g2: extra_gen,
-                h2: lifted_extra_a,
+                g1: &Point::generator(),
+                h1: &lifted_a,
+                g2: &extra_gen,
+                h2: &lifted_extra_a,
             };
             let proof = dleq::Proof::create(&w, &a, dleq.clone());
             assert!(proof.verify(&dleq));
@@ -96,13 +96,12 @@ mod tests {
 
             for share in shares {
                 /* share ids start at 1 */
-                assert!(share.id > 0);
-                let idx = (share.id - 1) as usize;
+                let idx = share.id.as_index();
                 let verified_encrypted =
                     share.verify(share.id, &pubs[idx], &escrow.extra_generator, &commitments);
                 assert!(
                     verified_encrypted,
-                    "encrypted share {} verification failed",
+                    "encrypted share {:?} verification failed",
                     share.id
                 );
 
@@ -153,8 +152,7 @@ mod tests {
             assert!(public_shares.verify(&mut drg, &pubs));
 
             for share in &public_shares.encrypted_shares {
-                assert!(share.id > 0);
-                let idx = (share.id - 1) as usize;
+                let idx = share.id.as_index();
                 let d = scrape::decrypt_share(&mut drg, &keys[idx], &pubs[idx], &share);
                 let verified_decrypted = d.verify(&pubs[idx], &share);
                 assert!(verified_decrypted);
