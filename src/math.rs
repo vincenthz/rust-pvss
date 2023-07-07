@@ -1,9 +1,11 @@
 // Math module define polynomial types and operations that is used to setup the scheme.
 use super::crypto;
 
+#[derive(Clone)]
 pub struct Polynomial {
     pub elements: Vec<crypto::Scalar>,
 }
+
 impl Polynomial {
     /// generate a new polynomial of specific degree
     pub fn generate(drg: &mut crypto::Drg, degree: u32) -> Polynomial {

@@ -11,6 +11,7 @@ use std::borrow::Borrow;
 
 pub type Secret = Point;
 
+#[derive(Clone)]
 pub struct Escrow {
     pub extra_generator: Point,
     pub polynomial: math::Polynomial,
@@ -18,16 +19,19 @@ pub struct Escrow {
     pub proof: dleq::Proof,
 }
 
+#[derive(Clone)]
 pub struct Commitment {
     point: Point,
 }
 
+#[derive(Clone)]
 pub struct EncryptedShare {
     pub id: ShareId,
     encrypted_val: Point,
     proof: dleq::Proof,
 }
 
+#[derive(Clone)]
 pub struct DecryptedShare {
     pub id: ShareId,
     decrypted_val: Point,
