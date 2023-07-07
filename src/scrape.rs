@@ -13,6 +13,7 @@ pub type Secret = Point;
 // this contains secret values (polynomial & secret) that are newly created.
 // this also contains by-product (extra_generator & proof) which are useful for
 // the protocol
+#[derive(Clone)]
 pub struct Escrow {
     pub threshold: Threshold,
     pub extra_generator: Point,
@@ -28,6 +29,7 @@ pub struct Escrow {
 //
 // there should be N encrypted_shares and N commitments
 // the parallel proofs should N elements too.
+#[derive(Clone)]
 pub struct PublicShares {
     pub threshold: Threshold,
     pub extra_generator: Point,
@@ -37,15 +39,18 @@ pub struct PublicShares {
     pub proofs: pdleq::Proof,
 }
 
+#[derive(Clone)]
 pub struct Commitment {
     point: Point,
 }
 
+#[derive(Clone)]
 pub struct EncryptedShare {
     pub id: ShareId,
     encrypted_val: Point,
 }
 
+#[derive(Clone)]
 pub struct DecryptedShare {
     pub id: ShareId,
     decrypted_val: Point,
