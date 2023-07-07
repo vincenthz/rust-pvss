@@ -12,7 +12,6 @@ pub struct Proof {
 
 impl Proof {
     pub fn create(params: &[(Scalar, &Scalar, dleq::DLEQ)]) -> Proof {
-        //let mut his = Vec::with_capacity(params.len() * 4);
         let mut zs = Vec::with_capacity(params.len());
 
         let mut hasher = PointHasher::new();
