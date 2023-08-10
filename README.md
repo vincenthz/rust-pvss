@@ -32,5 +32,4 @@ Publicly Verifiable Secret Sharing (PVSS) scheme implemented:
 ## Crypto
 
 For now the implementation uses the P256R1 elliptic curve by default, through
-the rust-openssl package.  In the future, the plan is to add support for all
-curves that support the necessary operations.
+the eccoxide package which wrap fiat-crypto code for this specific curve.
