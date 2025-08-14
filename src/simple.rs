@@ -44,7 +44,7 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     assert!(t >= 1, "threshold is invalid; < 1");
 
     let poly = math::Polynomial::generate(drg, t - 1);
-    let gen = Point::random_generator(drg);
+    let generator = Point::random_generator(drg);
 
     let secret = poly.at_zero();
     let g_s = Point::from_scalar(&secret);
@@ -53,13 +53,13 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     let dleq = dleq::DLEQ {
         g1: &Point::generator(),
         h1: &g_s,
-        g2: &gen,
-        h2: &gen.mul(&secret),
+        g2: &generator,
+        h2: &generator.mul(&secret),
     };
     let proof = dleq::Proof::create(&challenge, &secret, &dleq);
 
     Escrow {
-        extra_generator: gen,
+        extra_generator: generator,
         polynomial: poly,
         secret: g_s,
         proof,

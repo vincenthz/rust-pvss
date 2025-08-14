@@ -6,10 +6,6 @@ use std::ops::Add;
 use std::ops::Mul;
 use std::ops::Sub;
 
-// currently hardcode curve to P256R1, but in the future probably a good idea
-// to generalize the interface, and make it more generics (with generics for all crypto types)
-//pub const CURVE: openssl::nid::Nid = openssl::nid::Nid::X9_62_PRIME256V1;
-
 pub struct Drg(chacha::Drg<8>);
 
 impl Drg {

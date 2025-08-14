@@ -18,7 +18,7 @@ impl<'a> fmt::Display for PrettySlice<'a> {
 /// defaults cannot otherwise be avoided.
 pub trait ToPretty {
     /// Convert a type into a derivative form in order to make `format!` print it prettily.
-    fn pretty(&self) -> PrettySlice;
+    fn pretty<'a>(&'a self) -> PrettySlice<'a>;
     /// Express the object as a hex string.
     fn to_hex(&self) -> String {
         format!("{}", self.pretty())
@@ -26,7 +26,7 @@ pub trait ToPretty {
 }
 
 impl<T: AsRef<[u8]>> ToPretty for T {
-    fn pretty(&self) -> PrettySlice {
+    fn pretty<'a>(&'a self) -> PrettySlice<'a> {
         PrettySlice(self.as_ref())
     }
 }
