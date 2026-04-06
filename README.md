@@ -2,7 +2,6 @@
 
 [![Crates.io][crates-badge]][crates-url]
 [![MIT licensed][mit-badge]][mit-url]
-[![APACHE-2 licensed][apache2-badge]][apache2-url]
 [![Build Status][actions-badge]][actions-url]
 
 [crates-badge]: https://img.shields.io/crates/v/pvss.svg
