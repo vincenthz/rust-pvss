@@ -10,17 +10,21 @@ pub struct Proof {
     zs: Vec<Scalar>,
 }
 
+const DOMAIN_SEP: &[u8] = b"pvss-pdleq-v1:sha2-256:";
+
 impl Proof {
     pub fn create(params: &[(Scalar, &Scalar, dleq::DLEQ)]) -> Proof {
         let mut zs = Vec::with_capacity(params.len());
 
-        let mut hasher = PointHasher::new();
+        let mut hasher = PointHasher::new_sep(DOMAIN_SEP);
 
         // create the list [h1_1 ,h2_1 , h1_2 , h2_2, ... h2_n, a1_1, a2_1, .., a1_n, a2_n ]
         // to compute the challenge
         for param in params.iter() {
             let &(ref w, _, ref dleq) = param;
             hasher = hasher
+                .update(&dleq.g1)
+                .update(&dleq.g2)
                 .update(&dleq.h1)
                 .update(&dleq.h2)
                 .update(&dleq.g1.mul(&w))
@@ -44,7 +48,7 @@ impl Proof {
             return false;
         };
 
-        let mut hasher = PointHasher::new();
+        let mut hasher = PointHasher::new_sep(DOMAIN_SEP);
 
         // recompute the challenge
         for (i, z) in self.zs.iter().enumerate() {
@@ -55,6 +59,8 @@ impl Proof {
             let a2 = r2 - dleq.h2.mul(&self.c);
 
             hasher = hasher
+                .update(&dleq.g1)
+                .update(&dleq.g2)
                 .update(&dleq.h1)
                 .update(&dleq.h2)
                 .update(&a1)
