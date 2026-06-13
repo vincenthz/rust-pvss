@@ -82,6 +82,12 @@ impl PointHasher {
         }
     }
 
+    pub fn new_sep(label: &[u8]) -> Self {
+        PointHasher {
+            context: cryptoxide::hashing::sha2::Context256::new().update(label),
+        }
+    }
+
     pub fn update_mut(&mut self, p: &Point) {
         self.context.update_mut(&p.to_bytes());
     }

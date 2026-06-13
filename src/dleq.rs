@@ -17,11 +17,15 @@ pub struct Proof {
     z: Scalar,
 }
 
+const DOMAIN_SEP: &[u8] = b"pvss-dleq-v1:sha2-256:";
+
 impl Proof {
     pub fn create(w: &Scalar, a: &Scalar, dleq: &DLEQ) -> Proof {
         let a1 = dleq.g1.mul(&w);
         let a2 = dleq.g2.mul(&w);
-        let c = PointHasher::new()
+        let c = PointHasher::new_sep(DOMAIN_SEP)
+            .update(&dleq.g1)
+            .update(&dleq.g2)
             .update(&dleq.h1)
             .update(&dleq.h2)
             .update(&a1)
@@ -36,7 +40,9 @@ impl Proof {
         let r2 = dleq.g2.mul(&self.z);
         let a1 = r1 - dleq.h1.mul(&self.c);
         let a2 = r2 - dleq.h2.mul(&self.c);
-        let c = PointHasher::new()
+        let c = PointHasher::new_sep(DOMAIN_SEP)
+            .update(&dleq.g1)
+            .update(&dleq.g2)
             .update(&dleq.h1)
             .update(&dleq.h2)
             .update(&a1)
