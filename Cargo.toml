@@ -15,9 +15,9 @@ name = "pvss"
 
 [dependencies]
 openssl = { version = "0.10", optional = true }
-eccoxide = { version = "0.3", optional = true }
+eccoxide = { version = "0.4", optional = true }
 cryptoxide = { version = "0.5", optional = true }
-getrandom = { version = "0.2", optional = true }
+getrandom = { version = "0.4", optional = true }
 
 [features]
 default = ["eccoxide"]

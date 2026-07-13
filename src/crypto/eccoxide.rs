@@ -1,4 +1,5 @@
 use cryptoxide::drg::chacha;
+use cryptoxide::hashing::sha2;
 use cryptoxide::hashing::sha2::Sha256;
 use eccoxide::curve::sec2::p256r1 as curve;
 use std::convert::TryFrom;
@@ -12,7 +13,7 @@ impl Drg {
     pub fn new() -> Self {
         loop {
             let mut out = [0u8; 32];
-            if let Err(_) = getrandom::getrandom(&mut out) {
+            if let Err(_) = getrandom::fill(&mut out) {
                 continue;
             }
             let drg = chacha::Drg::new(&out);
@@ -72,19 +73,19 @@ pub fn create_keypair(drg: &mut Drg) -> (PublicKey, PrivateKey) {
 }
 
 pub struct PointHasher {
-    context: cryptoxide::hashing::sha2::Context256,
+    context: sha2::Context256,
 }
 
 impl PointHasher {
     pub fn new() -> Self {
         PointHasher {
-            context: cryptoxide::hashing::sha2::Context256::new(),
+            context: sha2::Context256::new(),
         }
     }
 
     pub fn new_sep(label: &[u8]) -> Self {
         PointHasher {
-            context: cryptoxide::hashing::sha2::Context256::new().update(label),
+            context: sha2::Context256::new().update(label),
         }
     }
 
@@ -136,7 +137,7 @@ impl Scalar {
     }
 
     pub fn hash_points(points: Vec<&Point>) -> Scalar {
-        let mut context = cryptoxide::hashing::sha2::Context256::new();
+        let mut context = sha2::Context256::new();
 
         for p in points {
             context.update_mut(&p.to_bytes());
@@ -227,13 +228,13 @@ impl PartialEq for Scalar {
 impl Point {
     pub fn infinity() -> Point {
         Point {
-            point: curve::Point::infinity(),
+            point: curve::Point::INFINITY,
         }
     }
 
     pub fn generator() -> Point {
         Point {
-            point: curve::Point::generator(),
+            point: curve::Point::GENERATOR,
         }
     }
 
@@ -279,8 +280,9 @@ impl Point {
     }
 
     pub fn from_scalar(s: &Scalar) -> Point {
-        let g = curve::Point::generator();
-        Point { point: &g * &s.bn }
+        Point {
+            point: curve::Point::mul_base(&s.bn),
+        }
     }
 
     pub fn mul(&self, s: &Scalar) -> Point {
