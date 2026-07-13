@@ -1,26 +1,26 @@
 // DLEQ proof through g^a
 use super::crypto::*;
 
-type Challenge = Scalar;
+type Challenge<C> = Scalar<C>;
 
 #[derive(Clone)]
-pub struct DLEQ<'a, 'b, 'c, 'd> {
-    pub g1: &'a Point,
-    pub h1: &'b Point,
-    pub g2: &'c Point,
-    pub h2: &'d Point,
+pub struct DLEQ<'a, C: EcOperation> {
+    pub g1: &'a Point<C>,
+    pub h1: &'a Point<C>,
+    pub g2: &'a Point<C>,
+    pub h2: &'a Point<C>,
 }
 
 #[derive(Clone)]
-pub struct Proof {
-    c: Challenge,
-    z: Scalar,
+pub struct Proof<C: EcOperation> {
+    c: Challenge<C>,
+    z: Scalar<C>,
 }
 
 const DOMAIN_SEP: &[u8] = b"pvss-dleq-v1:sha2-256:";
 
-impl Proof {
-    pub fn create(w: &Scalar, a: &Scalar, dleq: &DLEQ) -> Proof {
+impl<C: EcOperation> Proof<C> {
+    pub fn create(w: &Scalar<C>, a: &Scalar<C>, dleq: &DLEQ<'_, C>) -> Proof<C> {
         let a1 = dleq.g1.mul(&w);
         let a2 = dleq.g2.mul(&w);
         let c = PointHasher::new_sep(DOMAIN_SEP)
@@ -35,7 +35,7 @@ impl Proof {
         Proof { c, z: r }
     }
 
-    pub fn verify(&self, dleq: &DLEQ) -> bool {
+    pub fn verify(&self, dleq: &DLEQ<'_, C>) -> bool {
         let r1 = dleq.g1.mul(&self.z);
         let r2 = dleq.g2.mul(&self.z);
         let a1 = r1 - dleq.h1.mul(&self.c);

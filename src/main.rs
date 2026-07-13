@@ -1,5 +1,6 @@
 extern crate pvss;
 
+use pvss::crypto::P256r1;
 use std::fmt;
 
 /// Slice pretty print helper
@@ -39,7 +40,7 @@ fn main() {
     let mut keys = Vec::with_capacity(100);
     let mut pubs = Vec::with_capacity(100);
     for _ in 0..100 {
-        let (public, private) = pvss::crypto::create_keypair(&mut drg);
+        let (public, private) = pvss::crypto::create_keypair::<P256r1>(&mut drg);
 
         keys.push(private);
         pubs.push(public);
@@ -48,13 +49,13 @@ fn main() {
     // Round trip public key through bytes
     let pub_bytes = pubs[1].to_bytes();
     println!("pub_bytes = {}", pub_bytes.to_hex());
-    let pub_0 = pvss::crypto::PublicKey::from_bytes(&pub_bytes);
+    let pub_0 = pvss::crypto::PublicKey::<P256r1>::from_bytes(&pub_bytes);
     assert!(pub_0 == pubs[1]);
 
     // Round trip private key through bytes
     let priv_bytes = keys[1].to_bytes();
     println!("priv_bytes = {}", priv_bytes.to_hex());
-    let priv_0 = pvss::crypto::PrivateKey::from_bytes(&priv_bytes);
+    let priv_0 = pvss::crypto::PrivateKey::<P256r1>::from_bytes(&priv_bytes);
     assert!(priv_0 == keys[1]);
 
     let escrow = pvss::simple::escrow(&mut drg, t);

@@ -7,19 +7,19 @@ use super::math;
 use super::pdleq;
 use super::types::*;
 
-pub type Secret = Point;
+pub type Secret<C> = Point<C>;
 
 // a new escrowing context.
 // this contains secret values (polynomial & secret) that are newly created.
 // this also contains by-product (extra_generator & proof) which are useful for
 // the protocol
 #[derive(Clone)]
-pub struct Escrow {
+pub struct Escrow<C: EcOperation> {
     pub threshold: Threshold,
-    pub extra_generator: Point,
-    pub polynomial: math::Polynomial,
-    pub secret: Secret,
-    pub proof: dleq::Proof,
+    pub extra_generator: Point<C>,
+    pub polynomial: math::Polynomial<C>,
+    pub secret: Secret<C>,
+    pub proof: dleq::Proof<C>,
 }
 
 // Public values for a successful run of secret sharing.
@@ -30,36 +30,36 @@ pub struct Escrow {
 // there should be N encrypted_shares and N commitments
 // the parallel proofs should N elements too.
 #[derive(Clone)]
-pub struct PublicShares {
+pub struct PublicShares<C: EcOperation> {
     pub threshold: Threshold,
-    pub extra_generator: Point,
-    pub secret_proof: dleq::Proof,
-    pub encrypted_shares: Vec<EncryptedShare>,
-    pub commitments: Vec<Commitment>,
-    pub proofs: pdleq::Proof,
+    pub extra_generator: Point<C>,
+    pub secret_proof: dleq::Proof<C>,
+    pub encrypted_shares: Vec<EncryptedShare<C>>,
+    pub commitments: Vec<Commitment<C>>,
+    pub proofs: pdleq::Proof<C>,
 }
 
 #[derive(Clone)]
-pub struct Commitment {
-    point: Point,
+pub struct Commitment<C: EcOperation> {
+    point: Point<C>,
 }
 
 #[derive(Clone)]
-pub struct EncryptedShare {
+pub struct EncryptedShare<C: EcOperation> {
     pub id: ShareId,
-    encrypted_val: Point,
+    encrypted_val: Point<C>,
 }
 
 #[derive(Clone)]
-pub struct DecryptedShare {
+pub struct DecryptedShare<C: EcOperation> {
     pub id: ShareId,
-    decrypted_val: Point,
-    proof: dleq::Proof,
+    decrypted_val: Point<C>,
+    proof: dleq::Proof<C>,
 }
 
 // create a new escrow parameter.
 // the only parameter needed is the threshold necessary to be able to reconstruct.
-pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
+pub fn escrow<C: EcOperation>(drg: &mut Drg, t: Threshold) -> Escrow<C> {
     assert!(t >= 1, "threshold is invalid; < 1");
 
     let poly = math::Polynomial::generate(drg, t - 1);
@@ -86,7 +86,11 @@ pub fn escrow(drg: &mut Drg, t: Threshold) -> Escrow {
     }
 }
 
-pub fn create_shares(drg: &mut Drg, escrow: &Escrow, pubs: &[PublicKey]) -> PublicShares {
+pub fn create_shares<C: EcOperation>(
+    drg: &mut Drg,
+    escrow: &Escrow<C>,
+    pubs: &[PublicKey<C>],
+) -> PublicShares<C> {
     let n = pubs.len();
     let mut shares = Vec::with_capacity(n);
     let mut commitments = Vec::with_capacity(n);
@@ -137,12 +141,12 @@ pub fn create_shares(drg: &mut Drg, escrow: &Escrow, pubs: &[PublicKey]) -> Publ
     }
 }
 
-impl PublicShares {
+impl<C: EcOperation> PublicShares<C> {
     pub fn number_participants(&self) -> u32 {
         self.commitments.len() as u32
     }
 
-    pub fn verify(&self, drg: &mut Drg, publics: &[PublicKey]) -> bool {
+    pub fn verify(&self, drg: &mut Drg, publics: &[PublicKey<C>]) -> bool {
         // recreate all the DLEQs
         let mut dleqs = Vec::with_capacity(publics.len());
         for (i, public) in publics.iter().enumerate() {
@@ -184,8 +188,8 @@ impl PublicShares {
     }
 }
 
-impl DecryptedShare {
-    pub fn verify(&self, public: &PublicKey, eshare: &EncryptedShare) -> bool {
+impl<C: EcOperation> DecryptedShare<C> {
+    pub fn verify(&self, public: &PublicKey<C>, eshare: &EncryptedShare<C>) -> bool {
         let dleq = dleq::DLEQ {
             g1: &Point::generator(),
             h1: &public.point,
@@ -196,12 +200,12 @@ impl DecryptedShare {
     }
 }
 
-pub fn decrypt_share(
+pub fn decrypt_share<C: EcOperation>(
     drg: &mut Drg,
-    private: &PrivateKey,
-    public: &PublicKey,
-    share: &EncryptedShare,
-) -> DecryptedShare {
+    private: &PrivateKey<C>,
+    public: &PublicKey<C>,
+    share: &EncryptedShare<C>,
+) -> DecryptedShare<C> {
     let challenge = Scalar::generate(drg);
     let xi = &private.scalar;
     let yi = &public.point;
@@ -221,7 +225,11 @@ pub fn decrypt_share(
     }
 }
 
-fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scalar {
+fn interpolate_one<C: EcOperation>(
+    t: Threshold,
+    sid: usize,
+    shares: &[DecryptedShare<C>],
+) -> Scalar<C> {
     let mut v = Scalar::multiplicative_identity();
     for j in 0..(t as usize) {
         if j != sid {
@@ -235,7 +243,7 @@ fn interpolate_one(t: Threshold, sid: usize, shares: &[DecryptedShare]) -> Scala
 }
 
 // Try to recover a secret
-pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
+pub fn recover<C: EcOperation>(t: Threshold, shares: &[DecryptedShare<C>]) -> Result<Secret<C>, ()> {
     if t as usize > shares.len() {
         return Err(());
     };
@@ -247,7 +255,7 @@ pub fn recover(t: Threshold, shares: &[DecryptedShare]) -> Result<Secret, ()> {
     Ok(result)
 }
 
-pub fn verify_secret(secret: Secret, public_shares: &PublicShares) -> bool {
+pub fn verify_secret<C: EcOperation>(secret: Secret<C>, public_shares: &PublicShares<C>) -> bool {
     let mut commitment_interpolate = Point::infinity();
     for i in 0..(public_shares.threshold as usize) {
         let x = &public_shares.commitments[i].point;

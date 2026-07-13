@@ -1,4 +1,4 @@
-use crate::crypto::Scalar;
+use crate::crypto::{EcOperation, Scalar};
 use core::num::NonZeroU32;
 
 // threshold need to >= 2
@@ -20,7 +20,7 @@ impl ShareId {
         NonZeroU32::new(v).map(ShareId)
     }
 
-    pub fn to_scalar(self) -> Scalar {
+    pub fn to_scalar<C: EcOperation>(self) -> Scalar<C> {
         Scalar::from_u32(self.0.get())
     }
 

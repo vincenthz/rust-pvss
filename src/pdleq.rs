@@ -2,18 +2,18 @@
 use super::crypto::*;
 use super::dleq;
 
-type Challenge = Scalar;
+type Challenge<C> = Scalar<C>;
 
 #[derive(Clone)]
-pub struct Proof {
-    c: Challenge,
-    zs: Vec<Scalar>,
+pub struct Proof<C: EcOperation> {
+    c: Challenge<C>,
+    zs: Vec<Scalar<C>>,
 }
 
 const DOMAIN_SEP: &[u8] = b"pvss-pdleq-v1:sha2-256:";
 
-impl Proof {
-    pub fn create(params: &[(Scalar, &Scalar, dleq::DLEQ)]) -> Proof {
+impl<C: EcOperation> Proof<C> {
+    pub fn create(params: &[(Scalar<C>, &Scalar<C>, dleq::DLEQ<'_, C>)]) -> Proof<C> {
         let mut zs = Vec::with_capacity(params.len());
 
         let mut hasher = PointHasher::new_sep(DOMAIN_SEP);
@@ -42,7 +42,7 @@ impl Proof {
         Proof { c, zs }
     }
 
-    pub fn verify(&self, dleqs: &[dleq::DLEQ]) -> bool {
+    pub fn verify(&self, dleqs: &[dleq::DLEQ<'_, C>]) -> bool {
         if dleqs.len() != self.zs.len() {
             // FIXME probably an Err() .. instead of silent verify failure
             return false;
