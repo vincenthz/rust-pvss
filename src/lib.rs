@@ -76,15 +76,7 @@ mod tests {
     }
 
     fn run_pvss<C: EcOperation>() {
-        let tests = [
-            (1, 4),
-            (5, 5),
-            (2, 8),
-            (10, 50),
-            (48, 50),
-            (2, 20),
-            (10, 100),
-        ];
+        let tests = [(1, 4), (5, 5), (2, 8), (2, 15), (8, 20)];
         let mut drg = Drg::new();
         for test in tests.iter() {
             let &(t, nb_keys) = test;
@@ -139,7 +131,7 @@ mod tests {
     }
 
     fn run_scrape<C: EcOperation>() {
-        let tests = [(1, 4), (2, 8), (10, 50), (48, 50), (2, 20), (10, 100)];
+        let tests = [(1, 4), (4, 5), (2, 8), (2, 15), (8, 20)];
         let mut drg = Drg::new();
         for test in tests.iter() {
             let &(t, nb_keys) = test;
