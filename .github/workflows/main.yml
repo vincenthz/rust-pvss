@@ -1,71 +1,46 @@
-# copy of https://github.com/actions-rs/meta/blob/master/recipes/quickstart.md
-on: [push, pull_request]
+name: Rust CI
 
-name: CI
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings" # Treats all compiler warnings as errors
 
 jobs:
-  check:
-    name: Check
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-
-  test:
-    name: Test Suite
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-
-  fmt:
-    name: Rustfmt
+  lint-and-format:
+    name: Lint & Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #clippy:
-  #  name: Clippy
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - uses: actions/checkout@v1
-  #    - uses: actions-rs/toolchain@v1
-  #      with:
-  #        profile: minimal
-  #        toolchain: stable
-  #        override: true
-  #    - run: rustup component add clippy
-  #    - uses: actions-rs/cargo@v1
-  #      with:
-  #        command: clippy
-  #        args: -- -D warnings
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      #- name: Run Clippy linter
+      #  run: cargo clippy --all-targets --all-features
+
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build project
+        run: cargo build --verbose
+
+      - name: Run unit and integration tests
+        run: cargo test --verbose
