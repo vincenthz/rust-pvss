@@ -2,13 +2,14 @@
 // group (RFC 9496), backed by the `eccoxide` crate.
 //
 // Unlike the SEC2 short-Weierstrass curves, ristretto255 has a 32-byte canonical
-// encoding (no sign byte), an Elligator-based hash-to-group that never fails,
-// and conventionally derives challenges with SHA-512 reduced modulo the group
-// order `l`. The [`EcOperation`]/[`Transcript`] abstraction accommodates all of
-// this without any change to the rest of the crate.
+// encoding (no sign byte) and an Elligator-based hash-to-group that never fails.
+// Its scalar arithmetic comes from eccoxide's `Field`/`CurveGroup` traits (see
+// `EcOperation`); challenge derivation uses the shared [`HashTranscript`], whose
+// SHA-512 + wide reduction is exactly the standard ristretto255 construction
+// (`2 * SCALAR_BYTES` = 64 bytes reduced modulo the group order `l`).
 
-use super::{EcOperation, Transcript};
-use cryptoxide::hashing::sha2::{Context512, Sha512};
+use super::{EcOperation, HashTranscript, Sha512};
+use cryptoxide::hashing::sha2;
 use eccoxide::curve::curve25519::Scalar;
 use eccoxide::curve::curve25519::ristretto255::RistrettoPoint;
 
@@ -16,45 +17,24 @@ use eccoxide::curve::curve25519::ristretto255::RistrettoPoint;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Ristretto255;
 
-/// A SHA-512 Fiat–Shamir transcript reducing to a ristretto255 scalar (mod `l`).
-///
-/// The 64-byte digest is reduced with the standard wide (64-byte) reduction,
-/// which — unlike a 32-byte canonical parse — is total and essentially unbiased.
-pub struct Sha512Transcript {
-    context: Context512,
-}
-
-impl Transcript for Sha512Transcript {
-    type Scalar = Scalar;
-
-    fn new() -> Self {
-        Sha512Transcript {
-            context: Context512::new(),
-        }
-    }
-
-    fn new_sep(label: &[u8]) -> Self {
-        Sha512Transcript {
-            context: Context512::new().update(label),
-        }
-    }
-
-    fn absorb(&mut self, bytes: &[u8]) {
-        self.context.update_mut(bytes);
-    }
-
-    fn challenge(self) -> Scalar {
-        Scalar::init_from_wide_bytes(self.context.finalize())
-    }
-}
-
 impl EcOperation for Ristretto255 {
     type Scalar = Scalar;
     type Point = RistrettoPoint;
-    type Transcript = Sha512Transcript;
+    type Transcript = HashTranscript<Self, Sha512>;
 
-    fn scalar_from_bytes(bytes: &[u8; 32]) -> Option<Self::Scalar> {
-        Scalar::from_bytes(bytes)
+    const SCALAR_BYTES: usize = Scalar::SIZE_BYTES;
+
+    fn scalar_from_bytes(bytes: &[u8]) -> Option<Self::Scalar> {
+        let arr = <[u8; Scalar::SIZE_BYTES]>::try_from(bytes).ok()?;
+        Scalar::from_bytes(&arr)
+    }
+
+    fn scalar_from_wide_bytes(bytes: &[u8]) -> Self::Scalar {
+        Scalar::init_from_wide_bytes(
+            bytes
+                .try_into()
+                .expect("wide scalar buffer must be 2 * SCALAR_BYTES"),
+        )
     }
 
     fn scalar_to_bytes(s: &Self::Scalar) -> Vec<u8> {
@@ -76,7 +56,9 @@ impl EcOperation for Ristretto255 {
     }
 
     fn point_hash_to_curve(slice: &[u8]) -> Self::Point {
-        let digest = Sha512::new().update(slice).finalize();
+        // ristretto's one-way map consumes exactly 64 uniform bytes, i.e. a
+        // single SHA-512 digest (its standard hash-to-group instantiation).
+        let digest = sha2::Sha512::new().update(slice).finalize();
         RistrettoPoint::from_uniform_bytes(&digest)
     }
 }

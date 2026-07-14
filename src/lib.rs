@@ -41,6 +41,19 @@ mod tests {
         }
     }
 
+    fn run_key_serialization<C: EcOperation>() {
+        let mut drg = Drg::new();
+        for _ in 0..NB_TESTS {
+            let (public, private) = crypto::create_keypair::<C>(&mut drg);
+
+            let public2 = PublicKey::<C>::from_bytes(&public.to_bytes());
+            assert!(public2 == public);
+
+            let private2 = PrivateKey::<C>::from_bytes(&private.to_bytes());
+            assert!(private2 == private);
+        }
+    }
+
     fn run_dleq<C: EcOperation>() {
         let mut drg = Drg::new();
         for _ in 0..NB_TESTS {
@@ -185,6 +198,11 @@ mod tests {
                 }
 
                 #[test]
+                fn key_serialization() {
+                    run_key_serialization::<$curve>()
+                }
+
+                #[test]
                 fn dleq_works() {
                     run_dleq::<$curve>()
                 }
@@ -204,5 +222,7 @@ mod tests {
 
     curve_tests!(p256r1, P256r1);
     curve_tests!(p256k1, P256k1);
+    curve_tests!(p384r1, P384r1);
+    curve_tests!(p521r1, P521r1);
     curve_tests!(ristretto255, Ristretto255);
 }

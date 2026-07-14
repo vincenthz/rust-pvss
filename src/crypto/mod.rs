@@ -12,7 +12,9 @@ mod sec2;
 pub use self::ristretto::*;
 pub use self::sec2::*;
 
+use core::marker::PhantomData;
 use cryptoxide::drg::chacha;
+use cryptoxide::hashing::sha2;
 use eccoxide::curve::field::Field;
 use eccoxide::curve::group::CurveGroup;
 use std::ops::{Add, Mul, Sub};
@@ -37,11 +39,10 @@ impl Drg {
 /// messages (points and domain-separation labels) and squeezes out a scalar
 /// challenge.
 ///
-/// Making this an associated type of [`EcOperation`] is what keeps the hashing
-/// flexible: an implementation is free to pick both the hash function and the
-/// reduction to a scalar. The SEC2 curves use SHA-256 (see [`Sha256Transcript`])
-/// while ristretto255 uses SHA-512 with a wide reduction (see
-/// [`Sha512Transcript`]).
+/// Making this an associated type of [`EcOperation`] keeps the hashing flexible:
+/// an implementation is free to pick both the hash function and the reduction
+/// to a scalar. [`HashTranscript`] is a ready-made, curve-size-agnostic
+/// implementation that all the built-in curves use.
 pub trait Transcript {
     /// Scalar type the transcript reduces to.
     type Scalar;
@@ -53,6 +54,122 @@ pub trait Transcript {
     fn absorb(&mut self, bytes: &[u8]);
     /// Squeeze the challenge scalar out of the transcript.
     fn challenge(self) -> Self::Scalar;
+}
+
+/// A hash function that can drive a [`HashTranscript`].
+///
+/// It exposes an incremental hashing context (to absorb the transcript) and a
+/// finalization to a digest. [`HashTranscript`] also runs it in counter mode
+/// (see [`hash_expand`]) to squeeze out as many bytes as the scalar field needs,
+/// so any fixed-length hash works for a curve of any size. [`Sha256`] and
+/// [`Sha512`] are provided.
+pub trait TranscriptHash {
+    /// Incremental hashing state.
+    type Context;
+    /// Start a new hashing context.
+    fn init() -> Self::Context;
+    /// Absorb a message chunk.
+    fn absorb(context: &mut Self::Context, bytes: &[u8]);
+    /// Finalize into a digest.
+    fn finalize(context: Self::Context) -> Vec<u8>;
+}
+
+/// SHA-256 as a [`TranscriptHash`].
+pub enum Sha256 {}
+
+impl TranscriptHash for Sha256 {
+    type Context = sha2::Context256;
+    fn init() -> Self::Context {
+        sha2::Context256::new()
+    }
+    fn absorb(context: &mut Self::Context, bytes: &[u8]) {
+        context.update_mut(bytes);
+    }
+    fn finalize(context: Self::Context) -> Vec<u8> {
+        context.finalize().to_vec()
+    }
+}
+
+/// SHA-512 as a [`TranscriptHash`].
+pub enum Sha512 {}
+
+impl TranscriptHash for Sha512 {
+    type Context = sha2::Context512;
+    fn init() -> Self::Context {
+        sha2::Context512::new()
+    }
+    fn absorb(context: &mut Self::Context, bytes: &[u8]) {
+        context.update_mut(bytes);
+    }
+    fn finalize(context: Self::Context) -> Vec<u8> {
+        context.finalize().to_vec()
+    }
+}
+
+/// Expand `parts` into `out.len()` bytes of output using the hash `H` in
+/// counter mode (MGF1-style): `out = H(parts.. || 0u32) || H(parts.. || 1u32) || ...`.
+///
+/// A fixed-length hash (e.g. SHA-512, 64 bytes) can thus produce the arbitrary
+/// byte count a larger curve needs — e.g. the `2 * SCALAR_BYTES` = 132 bytes
+/// required to reduce into a P-521 scalar.
+pub(crate) fn hash_expand<H: TranscriptHash>(parts: &[&[u8]], out: &mut [u8]) {
+    let mut block: u32 = 0;
+    let mut off = 0;
+    while off < out.len() {
+        let mut context = H::init();
+        for p in parts {
+            H::absorb(&mut context, p);
+        }
+        H::absorb(&mut context, &block.to_be_bytes());
+        let digest = H::finalize(context);
+        let n = core::cmp::min(digest.len(), out.len() - off);
+        out[off..off + n].copy_from_slice(&digest[..n]);
+        off += n;
+        block = block.wrapping_add(1);
+    }
+}
+
+/// A curve-size-agnostic Fiat–Shamir transcript, parameterized by its hash `H`.
+///
+/// The transcript is absorbed with `H`; on [`challenge`](Transcript::challenge)
+/// the digest is expanded (see [`hash_expand`]) to `2 * C::SCALAR_BYTES` bytes
+/// and reduced to a scalar via [`EcOperation::scalar_from_wide_bytes`]. The wide
+/// input makes the reduction essentially unbiased for a field of any size, so
+/// this works unchanged for 256-bit curves and for P-384 / P-521 alike.
+pub struct HashTranscript<C: EcOperation, H: TranscriptHash> {
+    context: H::Context,
+    _curve: PhantomData<C>,
+}
+
+impl<C: EcOperation, H: TranscriptHash> Transcript for HashTranscript<C, H> {
+    type Scalar = C::Scalar;
+
+    fn new() -> Self {
+        HashTranscript {
+            context: H::init(),
+            _curve: PhantomData,
+        }
+    }
+
+    fn new_sep(label: &[u8]) -> Self {
+        let mut context = H::init();
+        H::absorb(&mut context, label);
+        HashTranscript {
+            context,
+            _curve: PhantomData,
+        }
+    }
+
+    fn absorb(&mut self, bytes: &[u8]) {
+        H::absorb(&mut self.context, bytes);
+    }
+
+    fn challenge(self) -> C::Scalar {
+        let seed = H::finalize(self.context);
+        let mut buf = vec![0u8; 2 * C::SCALAR_BYTES];
+        hash_expand::<H>(&[&seed], &mut buf);
+        C::scalar_from_wide_bytes(&buf)
+    }
 }
 
 /// Abstraction over the elliptic-curve operations required by the PVSS schemes.
@@ -85,9 +202,18 @@ pub trait EcOperation: Clone {
     /// Fiat–Shamir transcript used to derive challenge scalars for this curve.
     type Transcript: Transcript<Scalar = Self::Scalar>;
 
-    /// Interpret 32 bytes as a scalar, returning `None` if it is not a valid
-    /// canonical representation.
-    fn scalar_from_bytes(bytes: &[u8; 32]) -> Option<Self::Scalar>;
+    /// Length in bytes of a scalar's canonical serialization (e.g. 32 for a
+    /// 256-bit curve, 48 for P-384, 66 for P-521). No fixed width is assumed
+    /// anywhere else in the crate.
+    const SCALAR_BYTES: usize;
+
+    /// Interpret a canonical scalar serialization (`SCALAR_BYTES` long),
+    /// returning `None` if it is the wrong length or not a valid representation.
+    fn scalar_from_bytes(bytes: &[u8]) -> Option<Self::Scalar>;
+    /// Reduce a wide, uniformly-random buffer (`2 * SCALAR_BYTES` long) to a
+    /// scalar. Used to derive challenge scalars and to sample random scalars
+    /// without modulo bias, for a field of any size.
+    fn scalar_from_wide_bytes(bytes: &[u8]) -> Self::Scalar;
     /// Serialize a scalar to its canonical byte representation.
     fn scalar_to_bytes(s: &Self::Scalar) -> Vec<u8>;
 
@@ -129,11 +255,12 @@ impl<C: EcOperation> Scalar<C> {
     }
 
     pub fn generate(drg: &mut Drg) -> Scalar<C> {
-        loop {
-            let out = drg.0.bytes();
-            if let Some(scalar) = Scalar::from_bytes(&out) {
-                return scalar;
-            }
+        // Sample `2 * SCALAR_BYTES` uniform bytes and reduce them: this is total
+        // (no rejection loop) and unbiased for a field of any size.
+        let mut buf = vec![0u8; 2 * C::SCALAR_BYTES];
+        drg.0.fill_slice(&mut buf);
+        Scalar {
+            inner: C::scalar_from_wide_bytes(&buf),
         }
     }
 
@@ -173,13 +300,8 @@ impl<C: EcOperation> Scalar<C> {
         }
     }
 
-    pub fn from_bytes(bytes: &[u8; 32]) -> Option<Scalar<C>> {
+    pub fn from_bytes(bytes: &[u8]) -> Option<Scalar<C>> {
         C::scalar_from_bytes(bytes).map(|inner| Scalar { inner })
-    }
-
-    pub fn from_slice(slice: &[u8]) -> Option<Scalar<C>> {
-        let bytes = <&[u8; 32]>::try_from(slice).ok()?;
-        Self::from_bytes(bytes)
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -284,9 +406,12 @@ impl<C: EcOperation> Point<C> {
     }
 
     pub fn random_generator(drg: &mut Drg) -> Point<C> {
+        // Seed with as many random bytes as the field is wide, so the generator
+        // is sampled with adequate entropy on curves of any size.
+        let mut seed = vec![0u8; 2 * C::SCALAR_BYTES];
         loop {
-            let out = drg.0.bytes::<32>();
-            if let Some(point) = Self::try_hash_to_curve(&out) {
+            drg.0.fill_slice(&mut seed);
+            if let Some(point) = Self::try_hash_to_curve(&seed) {
                 return point;
             }
         }
@@ -433,7 +558,7 @@ impl<C: EcOperation> PrivateKey<C> {
 
     pub fn from_bytes(bytes: &[u8]) -> PrivateKey<C> {
         PrivateKey {
-            scalar: Scalar::from_slice(bytes).unwrap(),
+            scalar: Scalar::from_bytes(bytes).unwrap(),
         }
     }
 }
