@@ -200,7 +200,10 @@ fn interpolate_one<C: EcOperation>(
 }
 
 // Try to recover a secret
-pub fn recover<C: EcOperation>(t: Threshold, shares: &[DecryptedShare<C>]) -> Result<Secret<C>, ()> {
+pub fn recover<C: EcOperation>(
+    t: Threshold,
+    shares: &[DecryptedShare<C>],
+) -> Result<Secret<C>, ()> {
     if t as usize > shares.len() {
         return Err(());
     };
