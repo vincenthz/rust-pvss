@@ -73,7 +73,7 @@ macro_rules! impl_sec2_weierstrass {
                 };
                 let arr = <[u8; $curve::FieldElement::SIZE_BYTES]>::try_from(&slice[1..]).ok()?;
                 let fe = $curve::FieldElement::from_bytes(&arr)?;
-                let pa = $curve::PointAffine::decompress(&fe, sign)?;
+                let pa = $curve::PointAffine::decompress(&fe, sign).into_option()?;
                 Some($curve::Point::from_affine(&pa))
             }
 
@@ -83,7 +83,7 @@ macro_rules! impl_sec2_weierstrass {
                 let arr = <[u8; $curve::FieldElement::SIZE_BYTES]>::try_from(buf.as_slice())
                     .expect("expanded buffer is FieldElement::SIZE_BYTES long");
                 let x = $curve::FieldElement::from_bytes(&arr)?;
-                let pa = $curve::PointAffine::decompress(&x, Sign::Positive)?;
+                let pa = $curve::PointAffine::decompress(&x, Sign::Positive).into_option()?;
                 Some($curve::Point::from_affine(&pa))
             }
 
@@ -97,7 +97,7 @@ macro_rules! impl_sec2_weierstrass {
                     let arr = <[u8; $curve::FieldElement::SIZE_BYTES]>::try_from(buf.as_slice())
                         .expect("expanded buffer is FieldElement::SIZE_BYTES long");
                     if let Some(x) = $curve::FieldElement::from_bytes(&arr) {
-                        if let Some(p) = $curve::PointAffine::decompress(&x, Sign::Positive) {
+                        if let Some(p) = $curve::PointAffine::decompress(&x, Sign::Positive).into_option() {
                             return $curve::Point::from_affine(&p);
                         }
                     }
