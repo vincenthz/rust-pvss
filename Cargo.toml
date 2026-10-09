@@ -14,7 +14,7 @@ edition = "2024"
 name = "pvss"
 
 [dependencies]
-eccoxide = { version = "0.4" }
+eccoxide = { version = "0.5" }
 cryptoxide = { version = "0.6" }
 getrandom = { version = "0.4" }
 
