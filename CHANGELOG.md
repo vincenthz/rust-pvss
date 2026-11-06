@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependency update**: `cryptoxide` bumped to 0.6, `eccoxide` bumped to 0.5 — adapted to `CtOption` return type changes in `PointAffine::decompress`.
+
 ## [0.3.0] — 2026-07-14
 
 ### Changed
